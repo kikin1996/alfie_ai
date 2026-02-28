@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body {
+  min-height: 100%;
+  margin: 0;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 222 47% 18%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 47% 18%;
+    --radius: 0.5rem;
+    --navy: 222 47% 18%;
+    --navy-light: 222 30% 28%;
+    --emerald: 160 84% 39%;
+    --emerald-light: 160 60% 45%;
+    --emerald-bg: 160 40% 96%;
+    --pending: 38 92% 50%;
+    --pending-bg: 38 80% 95%;
+    --warning: 38 92% 50%;
+    --warning-bg: 38 80% 95%;
+    --cancelled: 0 72% 51%;
+    --cancelled-bg: 0 60% 96%;
+    --sidebar-background: 222 47% 18%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 222 40% 25%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 222 30% 25%;
+    --sidebar-ring: 160 84% 39%;
+  }
+  .dark {
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+    --card: 222 47% 14%;
+    --card-foreground: 210 40% 98%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 222 47% 18%;
+    --navy: 222 30% 28%;
+    --navy-light: 222 25% 35%;
+  }
+}
