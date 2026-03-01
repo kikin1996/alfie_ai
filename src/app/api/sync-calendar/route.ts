@@ -56,7 +56,7 @@ export async function POST() {
 
   const now = new Date();
   const timeMin = now.toISOString();
-  const timeMax = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString();
+  const timeMax = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 1 měsíc dopředu
   const keyword = (settings.trigger_keyword ?? "#prohlidka").trim();
 
   let synced = 0;

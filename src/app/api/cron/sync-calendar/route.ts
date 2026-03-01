@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
   const now = new Date();
   const timeMin = now.toISOString();
-  const timeMax = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString(); // +90 dní
+  const timeMax = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 1 měsíc dopředu
   let totalSynced = 0;
 
   for (const row of settingsList as {
