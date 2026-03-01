@@ -1,0 +1,113 @@
+import { NextResponse } from "next/server";
+import { google } from "googleapis";
+import { createClient } from "@/lib/supabase-server";
+import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { parseCalendarEvent } from "@/lib/calendarParser";
+
+/**
+ * POST /api/sync-calendar
+ * Pro přihlášeného uživatele načte z Google Kalendáře události s klíčovým slovem
+ * a zapíše je do viewings (místo, datum/čas, jméno, tel.).
+ */
+export async function POST() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Přihlaste se" }, { status: 401 });
+  }
+
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    return NextResponse.json(
+      { error: "Chybí konfigurace Google (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)" },
+      { status: 500 }
+    );
+  }
+
+  let supabaseAdmin;
+  try {
+    supabaseAdmin = getSupabaseAdmin();
+  } catch {
+    return NextResponse.json(
+      { error: "Server není nakonfigurován (SUPABASE_SERVICE_ROLE_KEY)" },
+      { status: 500 }
+    );
+  }
+
+  const { data: settings } = await supabaseAdmin
+    .from("user_settings")
+    .select("trigger_keyword, google_refresh_token")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (!settings?.google_refresh_token) {
+    return NextResponse.json(
+      { error: "Nejprve propojte Google Kalendář v Nastavení" },
+      { status: 400 }
+    );
+  }
+
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, "");
+  oauth2Client.setCredentials({ refresh_token: settings.google_refresh_token });
+  const calendar = google.calendar({ version: "v3", auth: oauth2Client });
+
+  const now = new Date();
+  const timeMin = now.toISOString();
+  const timeMax = new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000).toISOString();
+  const keyword = (settings.trigger_keyword ?? "#prohlidka").trim();
+
+  let synced = 0;
+  try {
+    const { data: events } = await calendar.events.list({
+      calendarId: "primary",
+      timeMin,
+      timeMax,
+      singleEvents: true,
+      orderBy: "startTime",
+    });
+
+    const items = events.items ?? [];
+    for (const ev of items) {
+      const start = ev.start?.dateTime ?? ev.start?.date;
+      const end = ev.end?.dateTime ?? ev.end?.date;
+      if (!start || !ev.id) continue;
+
+      const parsed = parseCalendarEvent(
+        ev.id,
+        ev.summary ?? "",
+        ev.description ?? "",
+        ev.location ?? "",
+        start,
+        end ?? start,
+        keyword
+      );
+      if (!parsed) continue;
+
+      await supabaseAdmin.from("viewings").upsert(
+        {
+          user_id: session.user.id,
+          calendar_event_id: ev.id,
+          address: parsed.address,
+          client_phone: parsed.clientPhone,
+          client_name: parsed.clientName,
+          event_start: parsed.start,
+          event_end: parsed.end,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id,calendar_event_id" }
+      );
+      synced++;
+    }
+  } catch (err) {
+    console.error("Sync calendar:", err);
+    return NextResponse.json(
+      { error: "Nepodařilo se načíst kalendář. Zkontrolujte propojení v Nastavení." },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json({ ok: true, synced });
+}

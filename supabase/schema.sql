@@ -11,6 +11,7 @@ create table if not exists public.user_settings (
   twilio_phone_number text,
   sms_template text not null default 'Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte YES pro potvrzení.',
   sms_hours_before int not null default 2,
+  google_refresh_token text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique(user_id)

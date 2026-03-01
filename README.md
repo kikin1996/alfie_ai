@@ -60,8 +60,9 @@ Aby aplikace našla prohlídky a vytáhla telefon a adresu, používej v popisu/
 - **Přihlášení:** Google OAuth přes Supabase Auth.
 - **Nastavení:** klíčové slovo, Twilio údaje, šablona SMS, počet hodin před prohlídkou (např. odeslat 2 h před).
 - **Dashboard:** seznam nadcházejících a minulých prohlídek se stavy: Čeká, SMS odeslána, Potvrzeno, Zrušeno.
-- **Synchronizace kalendáře:** načtení událostí z Google Calendar s klíčovým slovem a parsování Tel/Adresa – realizuje se přes **Supabase Edge Function** nebo vlastní API (volání Google Calendar API s tokenem uživatele). Frontend zobrazuje data z tabulky `viewings`.
-- **SMS a odpovědi:** odeslání SMS (2 h před) a zpracování odpovědi „YES“ by mělo běžet na serveru (Edge Function + Twilio, případně webhook pro příchozí SMS). Server aktualizuje stav v `viewings` a může poslat notifikaci makléři (email/push).
+- **Synchronizace kalendáře (bez N8N):** cron volá `GET /api/cron/sync-calendar` každých 15 min (Vercel Cron). Načte události z Google Calendar (uživatelé s vyplněným `google_refresh_token` v DB), parsuje Tel/Adresa a zapisuje do `viewings`.
+- **SMS připomínky:** cron volá `GET /api/cron/send-reminder-sms` každou hodinu. Pro prohlídky, které jsou za X hodin (nastavení uživatele) a mají status `pending`, odešle SMS přes Twilio a nastaví `sms_sent`.
+- **Odpovědi klienta (YES/NO):** Twilio při příchozí SMS zavolá `POST /api/webhooks/twilio`. Aplikace najde prohlídku podle čísla, změní status na `confirmed` nebo `cancelled`.
 
 ## Skripty
 
@@ -70,8 +71,15 @@ Aby aplikace našla prohlídky a vytáhla telefon a adresu, používej v popisu/
 - `npm run preview` – náhled buildu
 - `npm run lint` – ESLint
 
+## Automatizace (cron + webhook)
+
+- **Vercel:** V `vercel.json` jsou crony – na Vercelu nastav v projektu **Environment Variables**: `CRON_SECRET` (tajný řetězec). Vercel při volání cronu pošle hlavičku `Authorization: Bearer <CRON_SECRET>`.
+- **Supabase:** Pro cron API potřebuješ **Service Role Key** (Supabase Dashboard → Settings → API): `SUPABASE_SERVICE_ROLE_KEY` v env (pouze na serveru, nikdy do frontendu).
+- **Google Calendar:** V env nastav `GOOGLE_CLIENT_ID` a `GOOGLE_CLIENT_SECRET` (OAuth 2.0 z Google Cloud Console). Uživatelé musí mít v DB uložený `google_refresh_token` – ten získáš OAuth flow s scope `https://www.googleapis.com/auth/calendar.readonly` (můžeš přidat stránku „Propojit kalendář“).
+- **Twilio webhook:** V Twilio Dashboard u čísla nastav **Webhook URL** pro příchozí SMS na `https://tvoje-domena.cz/api/webhooks/twilio` (metoda POST).
+
 ## Tipy
 
 - **Google API:** Client ID a nastavení OAuth děláš v Google Cloud Console; Supabase pak použije svůj redirect pro Google provider.
-- **SMS brána:** Pro reálné SMS potřebuješ účet u Twilia (nebo MessageBird); aplikace připraví UI a ukládání nastavení, samotné volání Twilia patří na backend.
+- **SMS brána:** Pro reálné SMS potřebuješ účet u Twilia; údaje vyplníš v Nastavení aplikace, odesílání běží v cronu.
 - **Formát události:** Doporuč makléřům jeden formát (např. `#prohlidka Tel: … Adresa: …`) v popisu nebo v názvu události.

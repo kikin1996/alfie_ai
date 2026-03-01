@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2 } from "lucide-react";
+import { Loader2, Calendar, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import Link from "next/link";
 
 const schema = z.object({
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
@@ -34,8 +36,11 @@ const defaultTemplate =
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
+  const calendarStatus = searchParams.get("calendar");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
   const supabase = createClient();
 
   const form = useForm<FormValues>({
@@ -53,11 +58,15 @@ export default function SettingsPage() {
   useEffect(() => {
     if (!user?.id) return;
     const load = async () => {
-      const { data } = await supabase
-        .from("user_settings")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const [settingsRes, calendarRes] = await Promise.all([
+        supabase
+          .from("user_settings")
+          .select("trigger_keyword, twilio_account_sid, twilio_auth_token, twilio_phone_number, sms_template, sms_hours_before")
+          .eq("user_id", user.id)
+          .maybeSingle(),
+        fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }),
+      ]);
+      const data = settingsRes.data;
       if (data) {
         form.reset({
           triggerKeyword: data.trigger_keyword ?? "#prohlidka",
@@ -68,10 +77,15 @@ export default function SettingsPage() {
           smsHoursBefore: data.sms_hours_before ?? 2,
         });
       }
+      setCalendarConnected(calendarRes.connected ?? false);
       setLoaded(true);
     };
     load();
   }, [user?.id]);
+
+  useEffect(() => {
+    if (calendarStatus === "ok") setCalendarConnected(true);
+  }, [calendarStatus]);
 
   const onSubmit = async (values: FormValues) => {
     if (!user?.id) return;
@@ -104,6 +118,16 @@ export default function SettingsPage() {
     );
   }
 
+  const calendarMessage = calendarStatus === "ok"
+    ? { icon: CheckCircle, text: "Google Kalendář je propojen.", className: "text-emerald-600 bg-emerald-50 border-emerald-200" }
+    : calendarStatus === "error"
+    ? { icon: XCircle, text: "Propojení se nepovedlo. Zkuste to znovu.", className: "text-destructive bg-destructive/10 border-destructive/20" }
+    : calendarStatus === "no_refresh"
+    ? { icon: AlertCircle, text: "Google nevrátil refresh token. Odhlaste se z Google a zkuste znovu s povolením „Offline access“.", className: "text-amber-600 bg-amber-50 border-amber-200" }
+    : calendarStatus === "config"
+    ? { icon: AlertCircle, text: "Na serveru chybí GOOGLE_CLIENT_ID nebo GOOGLE_CLIENT_SECRET.", className: "text-amber-600 bg-amber-50 border-amber-200" }
+    : null;
+
   return (
     <div className="p-6 max-w-2xl">
       <h1 className="text-2xl font-display font-semibold text-navy mb-2">
@@ -114,16 +138,42 @@ export default function SettingsPage() {
         zprávy.
       </p>
 
+      {calendarMessage && (
+        <div className={`mb-6 flex items-center gap-2 rounded-lg border p-3 ${calendarMessage.className}`}>
+          <calendarMessage.icon className="h-5 w-5 shrink-0" />
+          <p className="text-sm">{calendarMessage.text}</p>
+        </div>
+      )}
+
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>Kalendář</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5" />
+              Kalendář
+            </CardTitle>
             <CardDescription>
               Události obsahující toto slovo budou považovány za prohlídky.
               Formát v popisu: Tel: +420… Adresa: …
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div>
+              <Label>Propojení Google Kalendáře</Label>
+              <p className="text-sm text-muted-foreground mt-1 mb-2">
+                Prohlídky se načítají z událostí v Google Kalendáři. Propojte účet jednou a cron bude události synchronizovat.
+              </p>
+              {calendarConnected && (
+                <p className="text-sm text-emerald-600 mb-2 flex items-center gap-1">
+                  <CheckCircle className="h-4 w-4" /> Kalendář je propojen
+                </p>
+              )}
+              <Button type="button" variant="outline" asChild>
+                <Link href="/api/auth/google-calendar">
+                  {calendarConnected ? "Znovu propojit Google Kalendář" : "Propojit Google Kalendář"}
+                </Link>
+              </Button>
+            </div>
             <div>
               <Label htmlFor="triggerKeyword">
                 Klíčové slovo (např. #prohlidka)
