@@ -1,5 +1,14 @@
 export type ViewingStatus = "pending" | "sms_sent" | "confirmed" | "cancelled"
 
+export interface ExtraNotification {
+  id: string
+  type: "sms" | "vapi"
+  minutesBefore: number
+  label: string
+  sent: boolean
+  enabled: boolean
+}
+
 export interface Viewing {
   id: string
   calendarEventId: string
@@ -11,6 +20,13 @@ export interface Viewing {
   status: ViewingStatus
   smsSentAt?: string
   confirmedAt?: string
+  sms2hSent: boolean
+  sms1hSent: boolean
+  vapiCalled: boolean
+  sms2hEnabled: boolean
+  sms1hEnabled: boolean
+  vapiEnabled: boolean
+  extraNotifications: ExtraNotification[]
   createdAt: string
   updatedAt: string
   userId: string
@@ -20,11 +36,14 @@ export interface UserSettings {
   id: string
   userId: string
   triggerKeyword: string
-  twilioAccountSid: string | null
-  twilioAuthToken: string | null
-  twilioPhoneNumber: string | null
   smsTemplate: string
-  smsHoursBefore: number
+  smsbranaLogin: string | null
+  smsbranaPassword: string | null
+  telegramChatId: string | null
+  telegramBotToken: string | null
+  vapiApiKey: string | null
+  vapiAssistantId: string | null
+  vapiPhoneNumberId: string | null
   createdAt: string
   updatedAt: string
 }

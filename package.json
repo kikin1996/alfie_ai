@@ -10,6 +10,7 @@
     "db:schema": "node scripts/run-schema.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@google/genai": "^1.43.0",
     "@hookform/resolvers": "^3.10.0",
     "@radix-ui/react-accordion": "^1.2.2",

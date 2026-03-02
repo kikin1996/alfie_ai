@@ -1,16 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
-import { createClient } from "@/lib/supabase";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import CalendarView from "@/components/CalendarView";
-import type { Viewing, ViewingStatus } from "@/types";
+import type { Viewing, ViewingStatus, ExtraNotification } from "@/types";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
-import { Calendar, Loader2, List, CalendarDays, RefreshCw } from "lucide-react";
+import {
+  Calendar,
+  Loader2,
+  List,
+  CalendarDays,
+  RefreshCw,
+  CheckCircle2,
+  Clock,
+  XCircle,
+  Plus,
+  X,
+} from "lucide-react";
 
 const statusLabels: Record<ViewingStatus, string> = {
   pending: "Čeká",
@@ -26,101 +38,366 @@ const statusVariant: Record<ViewingStatus, "pending" | "sms_sent" | "confirmed" 
   cancelled: "cancelled",
 };
 
-type NotificationKey = "sms2h" | "sms1h" | "call30m";
+// ---------------------------------------------------------------------------
+// NotifFlag – interaktivní přepínač notifikace
+// ---------------------------------------------------------------------------
 
-type NotificationPrefs = {
-  sms2h: boolean;
-  sms1h: boolean;
-  call30m: boolean;
-};
+interface NotifFlagProps {
+  sent: boolean;
+  enabled: boolean;
+  label: string;
+  onToggle: () => Promise<void>;
+}
 
-const defaultPrefs: NotificationPrefs = {
-  sms2h: true,
-  sms1h: true,
-  call30m: true,
-};
+function NotifFlag({ sent, enabled, label, onToggle }: NotifFlagProps) {
+  const [localEnabled, setLocalEnabled] = useState(enabled);
+  const [busy, setBusy] = useState(false);
 
-function ViewingCard({
-  viewing,
-  prefs,
-  onToggle,
-}: {
-  viewing: Viewing;
-  prefs: NotificationPrefs;
-  onToggle: (id: string, key: NotificationKey) => void;
-}) {
+  const handleClick = async () => {
+    if (sent || busy) return;
+    setBusy(true);
+    const next = !localEnabled;
+    setLocalEnabled(next);
+    try {
+      await onToggle();
+    } catch {
+      setLocalEnabled(!next);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const stateClasses = sent
+    ? "bg-emerald-bg text-emerald border-emerald/20 cursor-default"
+    : localEnabled
+    ? "bg-muted text-muted-foreground border-border cursor-pointer hover:border-muted-foreground/40 hover:bg-muted/80"
+    : "bg-red-50 text-red-500 border-red-200 cursor-pointer hover:bg-red-100";
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={sent || busy}
+      title={
+        sent
+          ? "Odesláno"
+          : localEnabled
+          ? "Klikněte pro vypnutí"
+          : "Klikněte pro zapnutí"
+      }
+      className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border transition-all ${stateClasses}`}
+    >
+      {busy ? (
+        <Loader2 className="h-3 w-3 animate-spin" />
+      ) : sent ? (
+        <CheckCircle2 className="h-3 w-3" />
+      ) : localEnabled ? (
+        <Clock className="h-3 w-3" />
+      ) : (
+        <XCircle className="h-3 w-3" />
+      )}
+      <span className={!localEnabled && !sent ? "line-through" : ""}>{label}</span>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// AddNotifPanel – přidání vlastní notifikace
+// ---------------------------------------------------------------------------
+
+interface AddNotifPanelProps {
+  onAdd: (notif: ExtraNotification) => Promise<void>;
+  onClose: () => void;
+}
+
+function AddNotifPanel({ onAdd, onClose }: AddNotifPanelProps) {
+  const [type, setType] = useState<"sms" | "vapi">("sms");
+  const [minutes, setMinutes] = useState(240);
+  const [label, setLabel] = useState("SMS 4h");
+  const [saving, setSaving] = useState(false);
+
+  const autoLabel = (t: "sms" | "vapi", min: number) => {
+    const prefix = t === "sms" ? "SMS" : "Hovor";
+    if (min < 60) return `${prefix} ${min}min`;
+    const h = Math.round(min / 60);
+    return `${prefix} ${h}h`;
+  };
+
+  const handleTypeChange = (t: "sms" | "vapi") => {
+    setType(t);
+    setLabel(autoLabel(t, minutes));
+  };
+
+  const handleMinutesChange = (val: number) => {
+    setMinutes(val);
+    setLabel(autoLabel(type, val));
+  };
+
+  const handleSubmit = async () => {
+    if (!label.trim() || minutes <= 0) return;
+    setSaving(true);
+    try {
+      await onAdd({
+        id: crypto.randomUUID(),
+        type,
+        minutesBefore: minutes,
+        label: label.trim(),
+        sent: false,
+        enabled: true,
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="mt-2 rounded-lg border border-dashed border-border bg-muted/40 p-3">
+      <div className="flex flex-wrap items-end gap-2">
+        {/* Typ */}
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={() => handleTypeChange("sms")}
+            className={`text-[11px] px-2 py-0.5 rounded-full border transition-all ${
+              type === "sms"
+                ? "bg-navy text-white border-navy"
+                : "bg-muted text-muted-foreground border-border hover:border-muted-foreground/40"
+            }`}
+          >
+            SMS
+          </button>
+          <button
+            type="button"
+            onClick={() => handleTypeChange("vapi")}
+            className={`text-[11px] px-2 py-0.5 rounded-full border transition-all ${
+              type === "vapi"
+                ? "bg-navy text-white border-navy"
+                : "bg-muted text-muted-foreground border-border hover:border-muted-foreground/40"
+            }`}
+          >
+            Hovor
+          </button>
+        </div>
+
+        {/* Čas */}
+        <div className="flex items-center gap-1">
+          <Input
+            type="number"
+            min={5}
+            max={2880}
+            value={minutes}
+            onChange={(e) => handleMinutesChange(Number(e.target.value))}
+            className="h-6 w-16 text-[11px] px-2 py-0"
+          />
+          <span className="text-[11px] text-muted-foreground">min</span>
+        </div>
+
+        {/* Název */}
+        <Input
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+          placeholder="Název"
+          className="h-6 w-20 text-[11px] px-2 py-0"
+        />
+
+        {/* Tlačítka */}
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={saving || !label.trim() || minutes <= 0}
+          className="text-[11px] px-2 py-0.5 rounded-full border bg-navy text-white border-navy hover:bg-navy/90 disabled:opacity-50 transition-all"
+        >
+          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : "Přidat"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-[11px] px-2 py-0.5 rounded-full border bg-muted text-muted-foreground border-border hover:border-muted-foreground/40 transition-all"
+        >
+          Zrušit
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ViewingCard – stateful karta prohlídky
+// ---------------------------------------------------------------------------
+
+function ViewingCard({ viewing: initial }: { viewing: Viewing }) {
+  const [viewing, setViewing] = useState<Viewing>(initial);
+  const [addingNotif, setAddingNotif] = useState(false);
+
+  const patchNotification = useCallback(
+    async (body: Record<string, unknown>) => {
+      const res = await fetch(`/api/viewings/${viewing.id}/notifications`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("patch failed");
+    },
+    [viewing.id]
+  );
+
+  const toggleBuiltIn = useCallback(
+    async (
+      field: "sms2h_enabled" | "sms1h_enabled" | "vapi_enabled",
+      camelKey: "sms2hEnabled" | "sms1hEnabled" | "vapiEnabled"
+    ) => {
+      const next = !viewing[camelKey];
+      setViewing((v) => ({ ...v, [camelKey]: next }));
+      try {
+        await patchNotification({ field, value: next });
+      } catch {
+        setViewing((v) => ({ ...v, [camelKey]: !next }));
+      }
+    },
+    [viewing, patchNotification]
+  );
+
+  const updateExtra = useCallback(
+    async (extras: ExtraNotification[]) => {
+      const prev = viewing.extraNotifications;
+      setViewing((v) => ({ ...v, extraNotifications: extras }));
+      try {
+        await patchNotification({ extraNotifications: extras });
+      } catch {
+        setViewing((v) => ({ ...v, extraNotifications: prev }));
+      }
+    },
+    [viewing, patchNotification]
+  );
+
+  const handleAddNotif = async (notif: ExtraNotification) => {
+    await updateExtra([...viewing.extraNotifications, notif]);
+    setAddingNotif(false);
+  };
+
+  const handleToggleExtra = async (id: string) => {
+    const updated = viewing.extraNotifications.map((n) =>
+      n.id === id ? { ...n, enabled: !n.enabled } : n
+    );
+    await updateExtra(updated);
+  };
+
+  const handleRemoveExtra = async (id: string) => {
+    await updateExtra(viewing.extraNotifications.filter((n) => n.id !== id));
+  };
+
   const start = new Date(viewing.eventStart);
+
   return (
     <Card className="border-navy/10">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <CardTitle className="text-base">
-              Místo: {viewing.address}
-            </CardTitle>
+            <CardTitle className="text-base">Místo: {viewing.address}</CardTitle>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <Badge variant={statusVariant[viewing.status]}>
-              {statusLabels[viewing.status]}
-            </Badge>
-            <div className="flex flex-wrap justify-end gap-1">
-              <Button
-                type="button"
-                variant={prefs.sms2h ? "secondary" : "ghost"}
-                size="xs"
-                className="text-[11px] px-2 py-1 h-6"
-                onClick={() => onToggle(viewing.id, "sms2h")}
-              >
-                SMS 2 h před
-              </Button>
-              <Button
-                type="button"
-                variant={prefs.sms1h ? "secondary" : "ghost"}
-                size="xs"
-                className="text-[11px] px-2 py-1 h-6"
-                onClick={() => onToggle(viewing.id, "sms1h")}
-              >
-                SMS 1 h před
-              </Button>
-              <Button
-                type="button"
-                variant={prefs.call30m ? "secondary" : "ghost"}
-                size="xs"
-                className="text-[11px] px-2 py-1 h-6"
-                onClick={() => onToggle(viewing.id, "call30m")}
-              >
-                Telefon 30 min před
-              </Button>
-            </div>
-          </div>
+          <Badge variant={statusVariant[viewing.status]}>
+            {statusLabels[viewing.status]}
+          </Badge>
         </div>
       </CardHeader>
-      <CardContent className="text-sm text-muted-foreground space-y-1">
+      <CardContent className="text-sm text-muted-foreground space-y-2">
         <p>
           <span className="font-medium text-foreground">Čas:</span>{" "}
           {format(start, "d. M. yyyy, HH:mm", { locale: cs })}
         </p>
         {viewing.clientName && <p>Klient: {viewing.clientName}</p>}
         {viewing.clientPhone && <p>Tel: {viewing.clientPhone}</p>}
+
+        {/* Notifikace */}
+        <div className="pt-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <NotifFlag
+              sent={viewing.sms2hSent}
+              enabled={viewing.sms2hEnabled}
+              label="SMS 2h"
+              onToggle={() => toggleBuiltIn("sms2h_enabled", "sms2hEnabled")}
+            />
+            <NotifFlag
+              sent={viewing.sms1hSent}
+              enabled={viewing.sms1hEnabled}
+              label="SMS 1h"
+              onToggle={() => toggleBuiltIn("sms1h_enabled", "sms1hEnabled")}
+            />
+            <NotifFlag
+              sent={viewing.vapiCalled}
+              enabled={viewing.vapiEnabled}
+              label="Hovor 30min"
+              onToggle={() => toggleBuiltIn("vapi_enabled", "vapiEnabled")}
+            />
+
+            {/* Extra notifikace */}
+            {viewing.extraNotifications.map((notif) => (
+              <div key={notif.id} className="flex items-center gap-0.5">
+                <NotifFlag
+                  sent={notif.sent}
+                  enabled={notif.enabled}
+                  label={notif.label}
+                  onToggle={() => handleToggleExtra(notif.id)}
+                />
+                {!notif.sent && (
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveExtra(notif.id)}
+                    title="Odebrat"
+                    className="text-muted-foreground hover:text-destructive transition-colors"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+
+            {/* Přidat notifikaci */}
+            {!addingNotif && (
+              <button
+                type="button"
+                onClick={() => setAddingNotif(true)}
+                title="Přidat notifikaci"
+                className="inline-flex items-center gap-0.5 text-[11px] px-1.5 py-0.5 rounded-full border border-dashed border-border text-muted-foreground hover:border-muted-foreground/60 hover:text-foreground transition-all"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            )}
+          </div>
+
+          {addingNotif && (
+            <AddNotifPanel
+              onAdd={handleAddNotif}
+              onClose={() => setAddingNotif(false)}
+            />
+          )}
+        </div>
       </CardContent>
     </Card>
   );
 }
 
+// ---------------------------------------------------------------------------
+// DashboardPage
+// ---------------------------------------------------------------------------
+
 type ViewMode = "list" | "calendar";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [viewings, setViewings] = useState<Viewing[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
-  const [notificationPrefs, setNotificationPrefs] = useState<Record<string, NotificationPrefs>>({});
   const supabase = createClient();
 
-  const fetchViewings = async () => {
-    if (!user?.id) return;
+  const fetchViewings = useCallback(async () => {
+    if (authLoading) return;
+    if (!user?.id || !isSupabaseConfigured()) {
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from("viewings")
       .select("*")
@@ -139,40 +416,24 @@ export default function DashboardPage() {
         status: r.status as Viewing["status"],
         smsSentAt: r.sms_sent_at as string | undefined,
         confirmedAt: r.confirmed_at as string | undefined,
+        sms2hSent: (r.sms2h_sent as boolean) ?? false,
+        sms1hSent: (r.sms1h_sent as boolean) ?? false,
+        vapiCalled: (r.vapi_called as boolean) ?? false,
+        sms2hEnabled: (r.sms2h_enabled as boolean) ?? true,
+        sms1hEnabled: (r.sms1h_enabled as boolean) ?? true,
+        vapiEnabled: (r.vapi_enabled as boolean) ?? true,
+        extraNotifications: (r.extra_notifications as ExtraNotification[]) ?? [],
         createdAt: r.created_at as string,
         updatedAt: r.updated_at as string,
         userId: r.user_id as string,
       }))
     );
-    // Inicializuj defaultní notifikační nastavení pro nové prohlídky (jen v paměti)
-    setNotificationPrefs((prev) => {
-      const next = { ...prev };
-      for (const r of rows) {
-        const id = r.id as string;
-        if (!next[id]) next[id] = { ...defaultPrefs };
-      }
-      return next;
-    });
     setLoading(false);
-  };
+  }, [user?.id, authLoading, supabase]);
 
   useEffect(() => {
-    if (!user?.id) return;
     fetchViewings();
-  }, [user?.id]);
-
-  const handleToggleNotification = (id: string, key: NotificationKey) => {
-    setNotificationPrefs((prev) => {
-      const current = prev[id] ?? { ...defaultPrefs };
-      return {
-        ...prev,
-        [id]: {
-          ...current,
-          [key]: !current[key],
-        },
-      };
-    });
-  };
+  }, [fetchViewings]);
 
   const syncCalendar = async () => {
     setSyncing(true);
@@ -186,9 +447,10 @@ export default function DashboardPage() {
       }
       setSyncMessage({
         type: "ok",
-        text: data.synced === 0
-          ? "Žádné nové události s klíčovým slovem."
-          : `Načteno ${data.synced} prohlídek z kalendáře.`,
+        text:
+          data.synced === 0
+            ? "Žádné nové události s klíčovým slovem."
+            : `Načteno ${data.synced} prohlídek z kalendáře.`,
       });
       await fetchViewings();
     } catch {
@@ -215,19 +477,17 @@ export default function DashboardPage() {
 
   return (
     <div className="p-6">
-      <div className="flex flex-col gap-4 mb-6 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Calendar className="h-8 w-8 text-navy" />
           <div>
-            <h1 className="text-2xl font-display font-semibold text-navy">
-              Prohlídky
-            </h1>
+            <h1 className="text-2xl font-display font-semibold text-navy">Prohlídky</h1>
             <p className="text-muted-foreground text-sm">
               Přehled z kalendáře – načtěte události tlačítkem níže.
             </p>
           </div>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex flex-wrap items-center gap-2">
           {syncMessage && (
             <p
               className={
@@ -239,12 +499,7 @@ export default function DashboardPage() {
               {syncMessage.text}
             </p>
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={syncCalendar}
-            disabled={syncing}
-          >
+          <Button variant="outline" size="sm" onClick={syncCalendar} disabled={syncing}>
             {syncing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
             ) : (
@@ -252,35 +507,35 @@ export default function DashboardPage() {
             )}
             Načíst prohlídky z kalendáře
           </Button>
+          {viewings.length > 0 && (
+            <div className="flex gap-1">
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4 mr-1.5" />
+                Seznam
+              </Button>
+              <Button
+                variant={viewMode === "calendar" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("calendar")}
+              >
+                <CalendarDays className="h-4 w-4 mr-1.5" />
+                Kalendář
+              </Button>
+            </div>
+          )}
         </div>
-        {viewings.length > 0 && (
-          <div className="flex gap-1">
-            <Button
-              variant={viewMode === "list" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("list")}
-            >
-              <List className="h-4 w-4 mr-1.5" />
-              Seznam
-            </Button>
-            <Button
-              variant={viewMode === "calendar" ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setViewMode("calendar")}
-            >
-              <CalendarDays className="h-4 w-4 mr-1.5" />
-              Kalendář
-            </Button>
-          </div>
-        )}
       </div>
 
       {viewings.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Zatím nemáte žádné prohlídky. Přidejte do Google Kalendáře události s
-            klíčovým slovem (např. #prohlidka) a formátem: Tel: +420… Adresa: …
-            Poté klikněte na „Načíst prohlídky z kalendáře“.
+            Zatím nemáte žádné prohlídky. Přidejte do Google Kalendáře události s klíčovým
+            slovem (např. #prohlidka) a formátem: Tel: +420… Adresa: … Poté klikněte na
+            „Načíst prohlídky z kalendáře".
           </CardContent>
         </Card>
       ) : viewMode === "calendar" ? (
@@ -289,17 +544,10 @@ export default function DashboardPage() {
         <div className="space-y-6">
           {upcoming.length > 0 && (
             <section>
-              <h2 className="text-lg font-medium text-navy mb-3">
-                Nadcházející
-              </h2>
+              <h2 className="text-lg font-medium text-navy mb-3">Nadcházející</h2>
               <div className="grid gap-3">
                 {upcoming.map((v) => (
-                  <ViewingCard
-                    key={v.id}
-                    viewing={v}
-                    prefs={notificationPrefs[v.id] ?? defaultPrefs}
-                    onToggle={handleToggleNotification}
-                  />
+                  <ViewingCard key={v.id} viewing={v} />
                 ))}
               </div>
             </section>
@@ -311,12 +559,7 @@ export default function DashboardPage() {
               </h2>
               <div className="grid gap-3">
                 {past.map((v) => (
-                  <ViewingCard
-                    key={v.id}
-                    viewing={v}
-                    prefs={notificationPrefs[v.id] ?? defaultPrefs}
-                    onToggle={handleToggleNotification}
-                  />
+                  <ViewingCard key={v.id} viewing={v} />
                 ))}
               </div>
             </section>

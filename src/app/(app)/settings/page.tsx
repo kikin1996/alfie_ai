@@ -15,29 +15,35 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase";
+import { Textarea } from "@/components/ui/textarea";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-import { Loader2, Calendar, CheckCircle, XCircle, AlertCircle } from "lucide-react";
+import {
+  Loader2,
+  Calendar,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Send,
+} from "lucide-react";
 import Link from "next/link";
 
 const schema = z.object({
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
-  twilioAccountSid: z.string().optional(),
-  twilioAuthToken: z.string().optional(),
-  twilioPhoneNumber: z.string().optional(),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
-  smsHoursBefore: z.coerce.number().min(0).max(48),
+  telegramBotToken: z.string().optional(),
+  telegramChatId: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 const defaultTemplate =
-  "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte YES pro potvrzení.";
+  "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
-  const calendarStatus = searchParams.get("calendar");
+  const calendarStatus = searchParams?.get("calendar") ?? null;
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
@@ -47,41 +53,44 @@ export default function SettingsPage() {
     resolver: zodResolver(schema),
     defaultValues: {
       triggerKeyword: "#prohlidka",
-      twilioAccountSid: "",
-      twilioAuthToken: "",
-      twilioPhoneNumber: "",
       smsTemplate: defaultTemplate,
-      smsHoursBefore: 2,
+      telegramBotToken: "",
+      telegramChatId: "",
     },
   });
 
   useEffect(() => {
-    if (!user?.id) return;
-    const load = async () => {
-      const [settingsRes, calendarRes] = await Promise.all([
-        supabase
-          .from("user_settings")
-          .select("trigger_keyword, twilio_account_sid, twilio_auth_token, twilio_phone_number, sms_template, sms_hours_before")
-          .eq("user_id", user.id)
-          .maybeSingle(),
-        fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }),
-      ]);
-      const data = settingsRes.data;
-      if (data) {
-        form.reset({
-          triggerKeyword: data.trigger_keyword ?? "#prohlidka",
-          twilioAccountSid: data.twilio_account_sid ?? "",
-          twilioAuthToken: data.twilio_auth_token ?? "",
-          twilioPhoneNumber: data.twilio_phone_number ?? "",
-          smsTemplate: data.sms_template ?? defaultTemplate,
-          smsHoursBefore: data.sms_hours_before ?? 2,
-        });
-      }
-      setCalendarConnected(calendarRes.connected ?? false);
+    if (authLoading) return;
+    if (!user?.id || !isSupabaseConfigured()) {
       setLoaded(true);
+      return;
+    }
+    const load = async () => {
+      try {
+        const [settingsRes, calendarRes] = await Promise.all([
+          supabase
+            .from("user_settings")
+            .select("trigger_keyword, sms_template, telegram_bot_token, telegram_chat_id")
+            .eq("user_id", user.id)
+            .maybeSingle(),
+          fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
+        ]);
+        const data = settingsRes.data;
+        if (data) {
+          form.reset({
+            triggerKeyword: data.trigger_keyword ?? "#prohlidka",
+            smsTemplate: data.sms_template ?? defaultTemplate,
+            telegramBotToken: data.telegram_bot_token ?? "",
+            telegramChatId: data.telegram_chat_id ?? "",
+          });
+        }
+        setCalendarConnected(calendarRes.connected ?? false);
+      } finally {
+        setLoaded(true);
+      }
     };
     load();
-  }, [user?.id]);
+  }, [user?.id, authLoading]);
 
   useEffect(() => {
     if (calendarStatus === "ok") setCalendarConnected(true);
@@ -95,11 +104,9 @@ export default function SettingsPage() {
         {
           user_id: user.id,
           trigger_keyword: values.triggerKeyword,
-          twilio_account_sid: values.twilioAccountSid || null,
-          twilio_auth_token: values.twilioAuthToken || null,
-          twilio_phone_number: values.twilioPhoneNumber || null,
           sms_template: values.smsTemplate,
-          sms_hours_before: values.smsHoursBefore,
+          telegram_bot_token: values.telegramBotToken || null,
+          telegram_chat_id: values.telegramChatId || null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -123,7 +130,7 @@ export default function SettingsPage() {
     : calendarStatus === "error"
     ? { icon: XCircle, text: "Propojení se nepovedlo. Zkuste to znovu.", className: "text-destructive bg-destructive/10 border-destructive/20" }
     : calendarStatus === "no_refresh"
-    ? { icon: AlertCircle, text: "Google nevrátil refresh token. Odhlaste se z Google a zkuste znovu s povolením „Offline access“.", className: "text-amber-600 bg-amber-50 border-amber-200" }
+    ? { icon: AlertCircle, text: 'Google nevrátil refresh token. Odhlaste se z Google a zkuste znovu s povolením "Offline access".', className: "text-amber-600 bg-amber-50 border-amber-200" }
     : calendarStatus === "config"
     ? { icon: AlertCircle, text: "Na serveru chybí GOOGLE_CLIENT_ID nebo GOOGLE_CLIENT_SECRET.", className: "text-amber-600 bg-amber-50 border-amber-200" }
     : null;
@@ -134,8 +141,7 @@ export default function SettingsPage() {
         Nastavení
       </h1>
       <p className="text-muted-foreground mb-6">
-        Klíčové slovo v událostech kalendáře, SMS brána (Twilio) a šablona
-        zprávy.
+        Kalendář, šablona SMS a Telegram notifikace.
       </p>
 
       {calendarMessage && (
@@ -146,6 +152,7 @@ export default function SettingsPage() {
       )}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Kalendář */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -161,7 +168,7 @@ export default function SettingsPage() {
             <div>
               <Label>Propojení Google Kalendáře</Label>
               <p className="text-sm text-muted-foreground mt-1 mb-2">
-                Prohlídky se načítají z událostí v Google Kalendáři. Propojte účet jednou a cron bude události synchronizovat.
+                Prohlídky se načítají z událostí v Google Kalendáři.
               </p>
               {calendarConnected && (
                 <p className="text-sm text-emerald-600 mb-2 flex items-center gap-1">
@@ -193,49 +200,10 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Šablona SMS */}
         <Card>
           <CardHeader>
-            <CardTitle>Twilio (SMS)</CardTitle>
-            <CardDescription>
-              Pro odesílání SMS potřebujete účet Twilio a číslo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="twilioAccountSid">Account SID</Label>
-              <Input
-                id="twilioAccountSid"
-                type="password"
-                {...form.register("twilioAccountSid")}
-                placeholder="AC…"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="twilioAuthToken">Auth Token</Label>
-              <Input
-                id="twilioAuthToken"
-                type="password"
-                {...form.register("twilioAuthToken")}
-                placeholder="…"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="twilioPhoneNumber">Twilio číslo (odkud SMS)</Label>
-              <Input
-                id="twilioPhoneNumber"
-                {...form.register("twilioPhoneNumber")}
-                placeholder="+420…"
-                className="mt-1"
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Šablona SMS</CardTitle>
+            <CardTitle>Šablona SMS (2h před)</CardTitle>
             <CardDescription>
               Placeholdery: {"{address}"}, {"{time}"}, {"{clientName}"}
             </CardDescription>
@@ -243,11 +211,11 @@ export default function SettingsPage() {
           <CardContent className="space-y-4">
             <div>
               <Label htmlFor="smsTemplate">Text zprávy</Label>
-              <textarea
+              <Textarea
                 id="smsTemplate"
                 {...form.register("smsTemplate")}
                 rows={4}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring mt-1"
+                className="mt-1"
               />
               {form.formState.errors.smsTemplate && (
                 <p className="text-sm text-destructive mt-1">
@@ -255,18 +223,43 @@ export default function SettingsPage() {
                 </p>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Telegram */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              Telegram notifikace
+            </CardTitle>
+            <CardDescription>
+              Dostanete Telegram zprávu při každé odeslané SMS nebo odpovědi klienta.
+              Vytvořte bota přes <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="underline">@BotFather</a>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="smsHoursBefore">
-                Odeslat SMS X hodin před prohlídkou
-              </Label>
+              <Label htmlFor="telegramBotToken">Bot Token</Label>
               <Input
-                id="smsHoursBefore"
-                type="number"
-                {...form.register("smsHoursBefore")}
-                min={0}
-                max={48}
-                className="mt-1 w-24"
+                id="telegramBotToken"
+                type="password"
+                {...form.register("telegramBotToken")}
+                placeholder="1234567890:AAF…"
+                className="mt-1"
               />
+            </div>
+            <div>
+              <Label htmlFor="telegramChatId">Chat ID</Label>
+              <Input
+                id="telegramChatId"
+                {...form.register("telegramChatId")}
+                placeholder="7920254614"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Zjistíte přes @userinfobot v Telegramu.
+              </p>
             </div>
           </CardContent>
         </Card>

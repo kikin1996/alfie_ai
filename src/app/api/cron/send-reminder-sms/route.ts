@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import Twilio from "twilio";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
+import { sendSms } from "@/lib/smsbrana";
+import { sendTelegramMessage } from "@/lib/telegram";
+import { initiateVapiCall } from "@/lib/vapi";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
+import type { ExtraNotification } from "@/types";
 
 function checkCronAuth(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -11,12 +14,7 @@ function checkCronAuth(request: NextRequest): boolean {
   return header === `Bearer ${secret}`;
 }
 
-function fillTemplate(
-  template: string,
-  address: string,
-  time: string,
-  clientName: string
-): string {
+function fillTemplate(template: string, address: string, time: string, clientName: string): string {
   return template
     .replace(/\{address\}/g, address)
     .replace(/\{time\}/g, time)
@@ -32,93 +30,128 @@ export async function GET(request: NextRequest) {
   try {
     supabaseAdmin = getSupabaseAdmin();
   } catch {
-    return NextResponse.json(
-      { error: "Supabase admin not configured" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Supabase admin not configured" }, { status: 500 });
   }
 
-  const { data: pendingViewings } = await supabaseAdmin
+  // Načíst globální konfiguraci (SMSbrána + VAPI)
+  const { data: appConfig } = await supabaseAdmin
+    .from("app_config")
+    .select("smsbrana_login, smsbrana_password, vapi_api_key, vapi_assistant_id, vapi_phone_number_id")
+    .eq("id", 1)
+    .maybeSingle();
+
+  const hasSms = appConfig?.smsbrana_login && appConfig?.smsbrana_password;
+  const hasVapi = appConfig?.vapi_api_key && appConfig?.vapi_assistant_id && appConfig?.vapi_phone_number_id;
+
+  const { data: viewings } = await supabaseAdmin
     .from("viewings")
-    .select("id, user_id, address, client_phone, client_name, event_start")
-    .eq("status", "pending");
+    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status")
+    .not("status", "in", '("confirmed","cancelled")')
+    .gte("event_start", new Date().toISOString());
 
-  if (!pendingViewings?.length) {
-    return NextResponse.json({ ok: true, sent: 0 });
+  if (!viewings?.length) {
+    return NextResponse.json({ ok: true, actions: 0 });
   }
 
-  const userIds = [...new Set(pendingViewings.map((v) => v.user_id))];
+  // Načíst Telegram + SMS šablonu per-user
+  const userIds = [...new Set(viewings.map((v) => v.user_id))];
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, twilio_account_sid, twilio_auth_token, twilio_phone_number, sms_template, sms_hours_before")
+    .select("user_id, sms_template, telegram_chat_id, telegram_bot_token")
     .in("user_id", userIds);
 
-  const settingsByUser = new Map(
-    (settingsList ?? []).map((s) => [s.user_id, s])
-  );
+  const settingsByUser = new Map((settingsList ?? []).map((s) => [s.user_id, s]));
 
   const now = new Date();
-  let sent = 0;
+  let actions = 0;
 
-  for (const v of pendingViewings as {
-    id: string;
-    user_id: string;
-    address: string;
-    client_phone: string;
-    client_name: string;
-    event_start: string;
+  for (const v of viewings as {
+    id: string; user_id: string; address: string; client_phone: string;
+    client_name: string; event_start: string; sms2h_sent: boolean;
+    sms1h_sent: boolean; vapi_called: boolean; sms2h_enabled: boolean;
+    sms1h_enabled: boolean; vapi_enabled: boolean;
+    extra_notifications: ExtraNotification[]; status: string;
   }[]) {
-    const settings = settingsByUser.get(v.user_id);
-    if (
-      !settings?.twilio_account_sid ||
-      !settings?.twilio_auth_token ||
-      !settings?.twilio_phone_number
-    ) {
-      continue;
-    }
+    const userSettings = settingsByUser.get(v.user_id);
 
     const eventStart = new Date(v.event_start);
-    const hoursBefore = (settings as { sms_hours_before?: number }).sms_hours_before ?? 2;
-    const windowStart = new Date(eventStart.getTime() - hoursBefore * 60 * 60 * 1000);
-    const windowEnd = new Date(windowStart.getTime() + 30 * 60 * 1000); // 30 min window to send
-
-    if (now < windowStart || now > windowEnd) continue;
-
-    const template =
-      (settings as { sms_template?: string }).sms_template ??
-      "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte YES pro potvrzení.";
+    const diffMinutes = (eventStart.getTime() - now.getTime()) / 60000;
     const timeStr = format(eventStart, "HH:mm", { locale: cs });
-    const body = fillTemplate(
-      template,
-      v.address,
-      timeStr,
-      v.client_name || "Klient"
-    );
+    const name = v.client_name || "Klient";
+    const template = userSettings?.sms_template ??
+      "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";
 
-    try {
-      const client = Twilio(
-        settings.twilio_account_sid,
-        settings.twilio_auth_token
-      );
-      await client.messages.create({
-        body,
-        from: settings.twilio_phone_number,
-        to: v.client_phone.replace(/\s/g, ""),
-      });
+    const hasTg = userSettings?.telegram_bot_token && userSettings?.telegram_chat_id;
 
-      await supabaseAdmin
-        .from("viewings")
-        .update({
-          status: "sms_sent",
-          sms_sent_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", v.id);
-      sent++;
-    } catch (err) {
-      console.error(`Send SMS for viewing ${v.id}:`, err);
+    // Okno 2h (100–140 min)
+    if (!v.sms2h_sent && v.sms2h_enabled && diffMinutes >= 100 && diffMinutes <= 140 && hasSms) {
+      const body = fillTemplate(template, v.address, timeStr, name);
+      const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
+      if (sent) {
+        await supabaseAdmin.from("viewings").update({ sms2h_sent: true, status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
+        if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+        actions++;
+      }
+    }
+
+    // Okno 1h (40–80 min)
+    if (!v.sms1h_sent && v.sms1h_enabled && diffMinutes >= 40 && diffMinutes <= 80 && hasSms) {
+      const body = fillTemplate("Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.", v.address, timeStr, name);
+      const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
+      if (sent) {
+        await supabaseAdmin.from("viewings").update({ sms1h_sent: true, updated_at: now.toISOString() }).eq("id", v.id);
+        if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+        actions++;
+      }
+    }
+
+    // Okno 30 min (20–40 min) – VAPI hovor
+    if (!v.vapi_called && v.vapi_enabled && diffMinutes >= 20 && diffMinutes <= 40 && hasVapi) {
+      const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString() }).catch(() => null);
+      if (callId) {
+        await supabaseAdmin.from("viewings").update({ vapi_called: true, updated_at: now.toISOString() }).eq("id", v.id);
+        if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+        actions++;
+      }
+    }
+
+    // Extra notifikace
+    const extras: ExtraNotification[] = v.extra_notifications ?? [];
+    let extrasUpdated = false;
+    const updatedExtras = [...extras];
+
+    for (let i = 0; i < updatedExtras.length; i++) {
+      const notif = updatedExtras[i];
+      if (notif.sent || !notif.enabled) continue;
+
+      const windowLow = notif.minutesBefore - 20;
+      const windowHigh = notif.minutesBefore + 20;
+      if (diffMinutes < windowLow || diffMinutes > windowHigh) continue;
+
+      if (notif.type === "sms" && hasSms) {
+        const body = fillTemplate(template, v.address, timeStr, name);
+        const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
+        if (sent) {
+          updatedExtras[i] = { ...notif, sent: true };
+          extrasUpdated = true;
+          if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📨 ${notif.label} odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+          actions++;
+        }
+      } else if (notif.type === "vapi" && hasVapi) {
+        const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString() }).catch(() => null);
+        if (callId) {
+          updatedExtras[i] = { ...notif, sent: true };
+          extrasUpdated = true;
+          if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📞 ${notif.label} hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+          actions++;
+        }
+      }
+    }
+
+    if (extrasUpdated) {
+      await supabaseAdmin.from("viewings").update({ extra_notifications: updatedExtras, updated_at: now.toISOString() }).eq("id", v.id);
     }
   }
 
-  return NextResponse.json({ ok: true, sent });
+  return NextResponse.json({ ok: true, actions });
 }
