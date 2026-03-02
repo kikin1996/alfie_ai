@@ -38,8 +38,30 @@ export function parseCalendarEvent(
   const telMatch = fullText.match(TEL_REGEX)
   const adresaMatch = fullText.match(ADRESA_REGEX)
 
-  const clientPhone = telMatch ? telMatch[1].trim() : ""
-  const address = adresaMatch ? adresaMatch[1].trim() : (location || "").trim()
+  let clientPhone = telMatch ? telMatch[1].trim() : ""
+  let address = adresaMatch ? adresaMatch[1].trim() : (location || "").trim()
+
+  // Fallback: title like "Jiří Novák, Adresa, 123 456 789, #prohlidka"
+  if (!clientPhone || !address) {
+    const keyword = triggerKeyword.trim().toLowerCase()
+    const parts = (summary || "")
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .filter((p) => (keyword ? !p.toLowerCase().includes(keyword) : true))
+
+    if (!clientPhone) {
+      const phonePart =
+        parts.find((p) => p.replace(/\D/g, "").length >= 9) || ""
+      if (phonePart) clientPhone = phonePart
+    }
+
+    if (!address) {
+      const addressPart = parts.find((p) => p !== clientPhone) || ""
+      if (addressPart) address = addressPart
+    }
+  }
+
   const clientName = (summary || "").trim() || "Klient"
 
   if (!address && !clientPhone) return null

@@ -19,30 +19,87 @@ const statusLabels: Record<ViewingStatus, string> = {
   cancelled: "Zrušeno",
 };
 
-const statusVariant: Record<
-  ViewingStatus,
-  "pending" | "sms_sent" | "confirmed" | "cancelled"
-> = {
+const statusVariant: Record<ViewingStatus, "pending" | "sms_sent" | "confirmed" | "cancelled"> = {
   pending: "pending",
   sms_sent: "sms_sent",
   confirmed: "confirmed",
   cancelled: "cancelled",
 };
 
-function ViewingCard({ viewing }: { viewing: Viewing }) {
+type NotificationKey = "sms2h" | "sms1h" | "call30m";
+
+type NotificationPrefs = {
+  sms2h: boolean;
+  sms1h: boolean;
+  call30m: boolean;
+};
+
+const defaultPrefs: NotificationPrefs = {
+  sms2h: true,
+  sms1h: true,
+  call30m: true,
+};
+
+function ViewingCard({
+  viewing,
+  prefs,
+  onToggle,
+}: {
+  viewing: Viewing;
+  prefs: NotificationPrefs;
+  onToggle: (id: string, key: NotificationKey) => void;
+}) {
   const start = new Date(viewing.eventStart);
   return (
     <Card className="border-navy/10">
       <CardHeader className="pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{viewing.address}</CardTitle>
-          <Badge variant={statusVariant[viewing.status]}>
-            {statusLabels[viewing.status]}
-          </Badge>
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <CardTitle className="text-base">
+              Místo: {viewing.address}
+            </CardTitle>
+          </div>
+          <div className="flex flex-col items-end gap-2">
+            <Badge variant={statusVariant[viewing.status]}>
+              {statusLabels[viewing.status]}
+            </Badge>
+            <div className="flex flex-wrap justify-end gap-1">
+              <Button
+                type="button"
+                variant={prefs.sms2h ? "secondary" : "ghost"}
+                size="xs"
+                className="text-[11px] px-2 py-1 h-6"
+                onClick={() => onToggle(viewing.id, "sms2h")}
+              >
+                SMS 2 h před
+              </Button>
+              <Button
+                type="button"
+                variant={prefs.sms1h ? "secondary" : "ghost"}
+                size="xs"
+                className="text-[11px] px-2 py-1 h-6"
+                onClick={() => onToggle(viewing.id, "sms1h")}
+              >
+                SMS 1 h před
+              </Button>
+              <Button
+                type="button"
+                variant={prefs.call30m ? "secondary" : "ghost"}
+                size="xs"
+                className="text-[11px] px-2 py-1 h-6"
+                onClick={() => onToggle(viewing.id, "call30m")}
+              >
+                Telefon 30 min před
+              </Button>
+            </div>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground space-y-1">
-        <p>{format(start, "d. M. yyyy, HH:mm", { locale: cs })}</p>
+        <p>
+          <span className="font-medium text-foreground">Čas:</span>{" "}
+          {format(start, "d. M. yyyy, HH:mm", { locale: cs })}
+        </p>
         {viewing.clientName && <p>Klient: {viewing.clientName}</p>}
         {viewing.clientPhone && <p>Tel: {viewing.clientPhone}</p>}
       </CardContent>
@@ -59,6 +116,7 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [notificationPrefs, setNotificationPrefs] = useState<Record<string, NotificationPrefs>>({});
   const supabase = createClient();
 
   const fetchViewings = async () => {
@@ -86,6 +144,15 @@ export default function DashboardPage() {
         userId: r.user_id as string,
       }))
     );
+    // Inicializuj defaultní notifikační nastavení pro nové prohlídky (jen v paměti)
+    setNotificationPrefs((prev) => {
+      const next = { ...prev };
+      for (const r of rows) {
+        const id = r.id as string;
+        if (!next[id]) next[id] = { ...defaultPrefs };
+      }
+      return next;
+    });
     setLoading(false);
   };
 
@@ -93,6 +160,19 @@ export default function DashboardPage() {
     if (!user?.id) return;
     fetchViewings();
   }, [user?.id]);
+
+  const handleToggleNotification = (id: string, key: NotificationKey) => {
+    setNotificationPrefs((prev) => {
+      const current = prev[id] ?? { ...defaultPrefs };
+      return {
+        ...prev,
+        [id]: {
+          ...current,
+          [key]: !current[key],
+        },
+      };
+    });
+  };
 
   const syncCalendar = async () => {
     setSyncing(true);
@@ -214,7 +294,12 @@ export default function DashboardPage() {
               </h2>
               <div className="grid gap-3">
                 {upcoming.map((v) => (
-                  <ViewingCard key={v.id} viewing={v} />
+                  <ViewingCard
+                    key={v.id}
+                    viewing={v}
+                    prefs={notificationPrefs[v.id] ?? defaultPrefs}
+                    onToggle={handleToggleNotification}
+                  />
                 ))}
               </div>
             </section>
@@ -226,7 +311,12 @@ export default function DashboardPage() {
               </h2>
               <div className="grid gap-3">
                 {past.map((v) => (
-                  <ViewingCard key={v.id} viewing={v} />
+                  <ViewingCard
+                    key={v.id}
+                    viewing={v}
+                    prefs={notificationPrefs[v.id] ?? defaultPrefs}
+                    onToggle={handleToggleNotification}
+                  />
                 ))}
               </div>
             </section>

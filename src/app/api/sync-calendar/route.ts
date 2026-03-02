@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { parseCalendarEvent } from "@/lib/calendarParser";
+import { parseCalendarEvent, eventMatchesTrigger } from "@/lib/calendarParser";
+import { geminiParseEvent } from "@/lib/geminiParseEvent";
 
 /**
  * POST /api/sync-calendar
@@ -75,15 +76,36 @@ export async function POST() {
       const end = ev.end?.dateTime ?? ev.end?.date;
       if (!start || !ev.id) continue;
 
-      const parsed = parseCalendarEvent(
+      const summary = ev.summary ?? "";
+      const description = ev.description ?? "";
+      const location = ev.location ?? "";
+      let parsed = parseCalendarEvent(
         ev.id,
-        ev.summary ?? "",
-        ev.description ?? "",
-        ev.location ?? "",
+        summary,
+        description,
+        location,
         start,
         end ?? start,
         keyword
       );
+
+      if (!parsed && eventMatchesTrigger(summary, description, keyword)) {
+        const fullText = [summary, description, location].filter(Boolean).join(" ");
+        const gemini = await geminiParseEvent(fullText);
+        if (gemini && (gemini.address || gemini.clientPhone)) {
+          parsed = {
+            id: ev.id,
+            summary,
+            description,
+            location,
+            start,
+            end: end ?? start,
+            address: gemini.address || "—",
+            clientPhone: gemini.clientPhone || "—",
+            clientName: gemini.clientName || "Klient",
+          };
+        }
+      }
       if (!parsed) continue;
 
       await supabaseAdmin.from("viewings").upsert(
