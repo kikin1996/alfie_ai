@@ -25,10 +25,13 @@ import {
   XCircle,
   AlertCircle,
   Send,
+  User,
 } from "lucide-react";
 import Link from "next/link";
 
 const schema = z.object({
+  brokerName: z.string().optional(),
+  agencyName: z.string().optional(),
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
   telegramBotToken: z.string().optional(),
@@ -46,12 +49,16 @@ export default function SettingsPage() {
   const calendarStatus = searchParams?.get("calendar") ?? null;
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveOk, setSaveOk] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
   const supabase = createClient();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
+      brokerName: "",
+      agencyName: "",
       triggerKeyword: "#prohlidka",
       smsTemplate: defaultTemplate,
       telegramBotToken: "",
@@ -70,7 +77,7 @@ export default function SettingsPage() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("trigger_keyword, sms_template, telegram_bot_token, telegram_chat_id")
+            .select("broker_name, agency_name, trigger_keyword, sms_template, telegram_bot_token, telegram_chat_id")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -78,6 +85,8 @@ export default function SettingsPage() {
         const data = settingsRes.data;
         if (data) {
           form.reset({
+            brokerName: data.broker_name ?? "",
+            agencyName: data.agency_name ?? "",
             triggerKeyword: data.trigger_keyword ?? "#prohlidka",
             smsTemplate: data.sms_template ?? defaultTemplate,
             telegramBotToken: data.telegram_bot_token ?? "",
@@ -99,10 +108,14 @@ export default function SettingsPage() {
   const onSubmit = async (values: FormValues) => {
     if (!user?.id) return;
     setSaving(true);
+    setSaveError(null);
+    setSaveOk(false);
     try {
-      await supabase.from("user_settings").upsert(
+      const { error } = await supabase.from("user_settings").upsert(
         {
           user_id: user.id,
+          broker_name: values.brokerName || null,
+          agency_name: values.agencyName || null,
           trigger_keyword: values.triggerKeyword,
           sms_template: values.smsTemplate,
           telegram_bot_token: values.telegramBotToken || null,
@@ -111,7 +124,13 @@ export default function SettingsPage() {
         },
         { onConflict: "user_id" }
       );
-      form.reset(values);
+      if (error) {
+        setSaveError(`Chyba uložení: ${error.message}`);
+      } else {
+        form.reset(values);
+        setSaveOk(true);
+        setTimeout(() => setSaveOk(false), 3000);
+      }
     } finally {
       setSaving(false);
     }
@@ -152,6 +171,41 @@ export default function SettingsPage() {
       )}
 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+        {/* Profil makléře */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Profil makléře
+            </CardTitle>
+            <CardDescription>
+              Používá se v hlasových hovorech VAPI jako proměnné{" "}
+              <code className="text-xs bg-muted px-1 rounded">{"{{brokerName}}"}</code> a{" "}
+              <code className="text-xs bg-muted px-1 rounded">{"{{agencyName}}"}</code>.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="brokerName">Jméno makléře</Label>
+              <Input
+                id="brokerName"
+                {...form.register("brokerName")}
+                placeholder="Jan Novák"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="agencyName">Název realitní kanceláře</Label>
+              <Input
+                id="agencyName"
+                {...form.register("agencyName")}
+                placeholder="Reality Praha"
+                className="mt-1"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Kalendář */}
         <Card>
           <CardHeader>
@@ -264,6 +318,16 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
+        {saveError && (
+          <p className="text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-3 py-2">
+            {saveError}
+          </p>
+        )}
+        {saveOk && (
+          <p className="text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center gap-2">
+            <CheckCircle className="h-4 w-4" /> Nastavení uloženo
+          </p>
+        )}
         <Button type="submit" variant="navy" disabled={saving}>
           {saving ? (
             <>

@@ -24,6 +24,7 @@ export async function sendSms(
   if (!res.ok) return false;
 
   const text = await res.text();
-  // SMSbrána vrací prázdnou odpověď nebo chybový kód při chybě
-  return text.trim() === "" || text.trim() === "OK";
+  const trimmed = text.trim();
+  // SMSbrána vrací "err=0" nebo prázdný string při úspěchu
+  return trimmed === "" || trimmed === "OK" || trimmed.startsWith("err=0");
 }

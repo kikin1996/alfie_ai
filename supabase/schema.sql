@@ -60,6 +60,7 @@ create table if not exists public.app_config (
   vapi_api_key text,
   vapi_assistant_id text,
   vapi_phone_number_id text,
+  vapi_minutes_before integer not null default 30,
   updated_at timestamptz not null default now(),
   constraint app_config_single_row check (id = 1)
 );

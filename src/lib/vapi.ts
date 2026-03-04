@@ -10,15 +10,18 @@ export async function initiateVapiCall(opts: {
   eventId: string;
   address: string;
   startISO: string;
+  brokerName?: string;
+  agencyName?: string;
+  minutesBefore?: number;
 }): Promise<string> {
-  const res = await fetch("https://api.vapi.ai/v1/phone-calls", {
+  const res = await fetch("https://api.vapi.ai/call", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${opts.apiKey}`,
     },
     body: JSON.stringify({
-      type: "outbound-phone-call",
+      type: "outboundPhoneCall",
       assistantId: opts.assistantId,
       phoneNumberId: opts.phoneNumberId,
       customer: {
@@ -29,9 +32,32 @@ export async function initiateVapiCall(opts: {
         event_id: opts.eventId,
         address: opts.address,
         startISO: opts.startISO,
+        startTime: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
+          hour: "2-digit",
+          minute: "2-digit",
+          timeZone: "Europe/Prague",
+        }),
       },
-      answeringMachineDetection: true,
-      recordingEnabled: true,
+      assistantOverrides: {
+        variableValues: {
+          brokerName: opts.brokerName ?? "",
+          agencyName: opts.agencyName ?? "",
+          clientName: opts.name,
+          address: opts.address,
+          minutesBefore: String(opts.minutesBefore ?? 30),
+          startTime: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Europe/Prague",
+          }),
+          startDate: new Date(opts.startISO).toLocaleDateString("cs-CZ", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            timeZone: "Europe/Prague",
+          }),
+        },
+      },
     }),
   });
 

@@ -36,12 +36,15 @@ export async function GET(request: NextRequest) {
   // Načíst globální konfiguraci (SMSbrána + VAPI)
   const { data: appConfig } = await supabaseAdmin
     .from("app_config")
-    .select("smsbrana_login, smsbrana_password, vapi_api_key, vapi_assistant_id, vapi_phone_number_id")
+    .select("smsbrana_login, smsbrana_password, vapi_api_key, vapi_assistant_id, vapi_phone_number_id, vapi_minutes_before")
     .eq("id", 1)
     .maybeSingle();
 
   const hasSms = appConfig?.smsbrana_login && appConfig?.smsbrana_password;
   const hasVapi = appConfig?.vapi_api_key && appConfig?.vapi_assistant_id && appConfig?.vapi_phone_number_id;
+  const vapiMinutesBefore: number = appConfig?.vapi_minutes_before ?? 30;
+  const vapiWindowLow = vapiMinutesBefore - 10;
+  const vapiWindowHigh = vapiMinutesBefore + 10;
 
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
@@ -57,7 +60,7 @@ export async function GET(request: NextRequest) {
   const userIds = [...new Set(viewings.map((v) => v.user_id))];
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, sms_template, telegram_chat_id, telegram_bot_token")
+    .select("user_id, sms_template, telegram_chat_id, telegram_bot_token, broker_name, agency_name")
     .in("user_id", userIds);
 
   const settingsByUser = new Map((settingsList ?? []).map((s) => [s.user_id, s]));
@@ -105,9 +108,9 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Okno 30 min (20–40 min) – VAPI hovor
-    if (!v.vapi_called && v.vapi_enabled && diffMinutes >= 20 && diffMinutes <= 40 && hasVapi) {
-      const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString() }).catch(() => null);
+    // Okno VAPI hovoru (vapiMinutesBefore ± 10 min)
+    if (!v.vapi_called && v.vapi_enabled && diffMinutes >= vapiWindowLow && diffMinutes <= vapiWindowHigh && hasVapi) {
+      const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName: userSettings?.broker_name ?? "", agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
       if (callId) {
         await supabaseAdmin.from("viewings").update({ vapi_called: true, updated_at: now.toISOString() }).eq("id", v.id);
         if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
@@ -138,7 +141,7 @@ export async function GET(request: NextRequest) {
           actions++;
         }
       } else if (notif.type === "vapi" && hasVapi) {
-        const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString() }).catch(() => null);
+        const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName: userSettings?.broker_name ?? "", agencyName: userSettings?.agency_name ?? "", minutesBefore: notif.minutesBefore }).catch(() => null);
         if (callId) {
           updatedExtras[i] = { ...notif, sent: true };
           extrasUpdated = true;
