@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import Anthropic from "@anthropic-ai/sdk";
 
 function normalizePhone(phone: string): string {
@@ -136,16 +136,16 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
   // Telegram notifikace brokerovi
   const { data: settings } = await supabaseAdmin
     .from("user_settings")
-    .select("telegram_bot_token, telegram_chat_id")
+    .select("whatsapp_phone, whatsapp_apikey")
     .eq("user_id", viewing.user_id)
     .maybeSingle();
 
-  if (settings?.telegram_bot_token && settings?.telegram_chat_id) {
+  if (settings?.whatsapp_phone && settings?.whatsapp_apikey) {
     const name = (viewing as { client_name: string }).client_name || number;
-    await sendTelegramMessage(
-      settings.telegram_bot_token,
-      settings.telegram_chat_id,
-      `💬 Odpověď klienta: ${name} (${number})\n📍 ${(viewing as { address: string }).address}\n→ <b>${confirmedLabel}</b>\n${reason}`
+    await sendWhatsAppMessage(
+      settings.whatsapp_phone,
+      settings.whatsapp_apikey,
+      `💬 Odpověď klienta: ${name} (${number})\n📍 ${(viewing as { address: string }).address}\n→ ${confirmedLabel}\n${reason}`
     ).catch(() => {});
   }
 

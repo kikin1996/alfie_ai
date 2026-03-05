@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Real Estate Viewing Automator",
-  description: "Automatizace prohlídek nemovitostí – účty, kalendář, SMS",
+  title: "Alfie AI",
+  description: "Automatizace prohlídek nemovitostí – kalendář, SMS, hovory",
 };
 
 export default function RootLayout({

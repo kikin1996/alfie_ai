@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendSms } from "@/lib/smsbrana";
-import { sendTelegramMessage } from "@/lib/telegram";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { initiateVapiCall } from "@/lib/vapi";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
   const userIds = [...new Set(viewings.map((v) => v.user_id))];
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, sms_template, telegram_chat_id, telegram_bot_token, broker_name, agency_name")
+    .select("user_id, sms_template, whatsapp_phone, whatsapp_apikey, broker_name, agency_name")
     .in("user_id", userIds);
 
   const settingsByUser = new Map((settingsList ?? []).map((s) => [s.user_id, s]));
@@ -84,7 +84,7 @@ export async function GET(request: NextRequest) {
     const template = userSettings?.sms_template ??
       "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";
 
-    const hasTg = userSettings?.telegram_bot_token && userSettings?.telegram_chat_id;
+    const hasWa = userSettings?.whatsapp_phone && userSettings?.whatsapp_apikey;
 
     // Okno 2h (100–140 min)
     if (!v.sms2h_sent && v.sms2h_enabled && diffMinutes >= 100 && diffMinutes <= 140 && hasSms) {
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
       if (sent) {
         await supabaseAdmin.from("viewings").update({ sms2h_sent: true, status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
-        if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+        if (hasWa) await sendWhatsAppMessage(userSettings.whatsapp_phone, userSettings.whatsapp_apikey, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
         actions++;
       }
     }
@@ -103,7 +103,7 @@ export async function GET(request: NextRequest) {
       const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
       if (sent) {
         await supabaseAdmin.from("viewings").update({ sms1h_sent: true, updated_at: now.toISOString() }).eq("id", v.id);
-        if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+        if (hasWa) await sendWhatsAppMessage(userSettings.whatsapp_phone, userSettings.whatsapp_apikey, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
         actions++;
       }
     }
@@ -113,7 +113,7 @@ export async function GET(request: NextRequest) {
       const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName: userSettings?.broker_name ?? "", agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
       if (callId) {
         await supabaseAdmin.from("viewings").update({ vapi_called: true, updated_at: now.toISOString() }).eq("id", v.id);
-        if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+        if (hasWa) await sendWhatsAppMessage(userSettings.whatsapp_phone, userSettings.whatsapp_apikey, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
         actions++;
       }
     }
@@ -137,7 +137,7 @@ export async function GET(request: NextRequest) {
         if (sent) {
           updatedExtras[i] = { ...notif, sent: true };
           extrasUpdated = true;
-          if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📨 ${notif.label} odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+          if (hasWa) await sendWhatsAppMessage(userSettings.whatsapp_phone, userSettings.whatsapp_apikey, `📨 ${notif.label} odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
           actions++;
         }
       } else if (notif.type === "vapi" && hasVapi) {
@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
         if (callId) {
           updatedExtras[i] = { ...notif, sent: true };
           extrasUpdated = true;
-          if (hasTg) await sendTelegramMessage(userSettings.telegram_bot_token, userSettings.telegram_chat_id, `📞 ${notif.label} hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
+          if (hasWa) await sendWhatsAppMessage(userSettings.whatsapp_phone, userSettings.whatsapp_apikey, `📞 ${notif.label} hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`).catch(() => {});
           actions++;
         }
       }

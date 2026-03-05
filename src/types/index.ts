@@ -39,8 +39,8 @@ export interface UserSettings {
   smsTemplate: string
   smsbranaLogin: string | null
   smsbranaPassword: string | null
-  telegramChatId: string | null
-  telegramBotToken: string | null
+  whatsappPhone: string | null
+  whatsappApikey: string | null
   vapiApiKey: string | null
   vapiAssistantId: string | null
   vapiPhoneNumberId: string | null

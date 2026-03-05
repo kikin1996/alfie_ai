@@ -34,8 +34,8 @@ const schema = z.object({
   agencyName: z.string().optional(),
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
-  telegramBotToken: z.string().optional(),
-  telegramChatId: z.string().optional(),
+  whatsappPhone: z.string().optional(),
+  whatsappApikey: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -61,8 +61,8 @@ export default function SettingsPage() {
       agencyName: "",
       triggerKeyword: "#prohlidka",
       smsTemplate: defaultTemplate,
-      telegramBotToken: "",
-      telegramChatId: "",
+      whatsappPhone: "",
+      whatsappApikey: "",
     },
   });
 
@@ -77,7 +77,7 @@ export default function SettingsPage() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, agency_name, trigger_keyword, sms_template, telegram_bot_token, telegram_chat_id")
+            .select("broker_name, agency_name, trigger_keyword, sms_template, whatsapp_phone, whatsapp_apikey")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -89,8 +89,8 @@ export default function SettingsPage() {
             agencyName: data.agency_name ?? "",
             triggerKeyword: data.trigger_keyword ?? "#prohlidka",
             smsTemplate: data.sms_template ?? defaultTemplate,
-            telegramBotToken: data.telegram_bot_token ?? "",
-            telegramChatId: data.telegram_chat_id ?? "",
+            whatsappPhone: data.whatsapp_phone ?? "",
+            whatsappApikey: data.whatsapp_apikey ?? "",
           });
         }
         setCalendarConnected(calendarRes.connected ?? false);
@@ -118,8 +118,8 @@ export default function SettingsPage() {
           agency_name: values.agencyName || null,
           trigger_keyword: values.triggerKeyword,
           sms_template: values.smsTemplate,
-          telegram_bot_token: values.telegramBotToken || null,
-          telegram_chat_id: values.telegramChatId || null,
+          whatsapp_phone: values.whatsappPhone || null,
+          whatsapp_apikey: values.whatsappApikey || null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -160,7 +160,7 @@ export default function SettingsPage() {
         Nastavení
       </h1>
       <p className="text-muted-foreground mb-6">
-        Kalendář, šablona SMS a Telegram notifikace.
+        Kalendář, šablona SMS a WhatsApp notifikace.
       </p>
 
       {calendarMessage && (
@@ -280,39 +280,40 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Telegram */}
+        {/* WhatsApp */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
-              Telegram notifikace
+              WhatsApp notifikace
             </CardTitle>
             <CardDescription>
-              Dostanete Telegram zprávu při každé odeslané SMS nebo odpovědi klienta.
-              Vytvořte bota přes <a href="https://t.me/BotFather" target="_blank" rel="noreferrer" className="underline">@BotFather</a>.
+              Dostanete WhatsApp zprávu při každé odeslané SMS nebo odpovědi klienta.
+              Aktivace: přidejte <strong>+34 644 59 78 19</strong> do kontaktů a pošlete na toto číslo zprávu{" "}
+              <em>„I allow callmebot to send me messages"</em>. API klíč dostanete odpovědí.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label htmlFor="telegramBotToken">Bot Token</Label>
+              <Label htmlFor="whatsappPhone">Vaše telefonní číslo (s předvolbou)</Label>
               <Input
-                id="telegramBotToken"
-                type="password"
-                {...form.register("telegramBotToken")}
-                placeholder="1234567890:AAF…"
+                id="whatsappPhone"
+                {...form.register("whatsappPhone")}
+                placeholder="+420777888999"
                 className="mt-1"
               />
             </div>
             <div>
-              <Label htmlFor="telegramChatId">Chat ID</Label>
+              <Label htmlFor="whatsappApikey">CallMeBot API klíč</Label>
               <Input
-                id="telegramChatId"
-                {...form.register("telegramChatId")}
-                placeholder="7920254614"
+                id="whatsappApikey"
+                type="password"
+                {...form.register("whatsappApikey")}
+                placeholder="1234567"
                 className="mt-1"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Zjistíte přes @userinfobot v Telegramu.
+                API klíč obdržíte jako WhatsApp odpověď od CallMeBot.
               </p>
             </div>
           </CardContent>
