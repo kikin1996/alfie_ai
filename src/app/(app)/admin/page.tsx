@@ -26,6 +26,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   HelpCircle,
+  Send,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -308,6 +309,8 @@ export default function AdminPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [testingSms, setTestingSms] = useState(false);
   const [testingVapi, setTestingVapi] = useState(false);
+  const [waTestState, setWaTestState] = useState<"idle" | "sending" | "ok" | "error">("idle");
+  const [waTestError, setWaTestError] = useState<string | null>(null);
 
   const [form, setForm] = useState<ConfigForm>({
     smsbranaLogin: "",
@@ -389,6 +392,25 @@ export default function AdminPage() {
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error ?? "Chyba při odesílání");
+  };
+
+  const sendTestWhatsApp = async () => {
+    setWaTestState("sending");
+    setWaTestError(null);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const res = await fetch("/api/test/whatsapp", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Chyba odesílání");
+      setWaTestState("ok");
+    } catch (e) {
+      setWaTestError(e instanceof Error ? e.message : "Chyba");
+      setWaTestState("error");
+    }
   };
 
   const sendTestVapi = async ({ phone, clientName, address, date, time }: VapiTestData) => {
@@ -576,6 +598,47 @@ export default function AdminPage() {
                   onSend={sendTestVapi}
                   onClose={() => setTestingVapi(false)}
                 />
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* WhatsApp test */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5" />
+              WhatsApp notifikace – test
+            </CardTitle>
+            <CardDescription>
+              Odešle testovací zprávu na číslo nastavené v sekci Nastavení. Ověřte, že CallMeBot funguje.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={sendTestWhatsApp}
+                disabled={waTestState === "sending"}
+                className="gap-1.5"
+              >
+                {waTestState === "sending" ? (
+                  <><Loader2 className="h-3.5 w-3.5 animate-spin" />Odesílám…</>
+                ) : (
+                  <><FlaskConical className="h-3.5 w-3.5" />Odeslat testovací WhatsApp</>
+                )}
+              </Button>
+              {waTestState === "ok" && (
+                <p className="text-sm text-emerald-600 flex items-center gap-1">
+                  <CheckCircle className="h-4 w-4" /> Zpráva odeslána – zkontrolujte WhatsApp
+                </p>
+              )}
+              {waTestState === "error" && (
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <XCircle className="h-4 w-4" /> {waTestError}
+                </p>
               )}
             </div>
           </CardContent>
