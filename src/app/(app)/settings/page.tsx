@@ -289,7 +289,7 @@ export default function SettingsPage() {
             </CardTitle>
             <CardDescription>
               Dostanete WhatsApp zprávu při každé odeslané SMS nebo odpovědi klienta.
-              Aktivace: přidejte <strong>+34 644 59 78 19</strong> do kontaktů a pošlete na toto číslo zprávu{" "}
+              Aktivace: přidejte <strong>+34 644 95 73 56</strong> do kontaktů a pošlete na toto číslo zprávu{" "}
               <em>„I allow callmebot to send me messages"</em>. API klíč dostanete odpovědí.
             </CardDescription>
           </CardHeader>
