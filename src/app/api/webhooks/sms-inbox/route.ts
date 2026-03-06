@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { notify } from "@/lib/notify";
 import Anthropic from "@anthropic-ai/sdk";
 
 function normalizePhone(phone: string): string {
@@ -136,17 +136,13 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
   // Telegram notifikace brokerovi
   const { data: settings } = await supabaseAdmin
     .from("user_settings")
-    .select("whatsapp_phone, whatsapp_apikey")
+    .select("whatsapp_phone, whatsapp_apikey, notification_channel, notification_email")
     .eq("user_id", viewing.user_id)
     .maybeSingle();
 
-  if (settings?.whatsapp_phone && settings?.whatsapp_apikey) {
+  if (settings) {
     const name = (viewing as { client_name: string }).client_name || number;
-    await sendWhatsAppMessage(
-      settings.whatsapp_phone,
-      settings.whatsapp_apikey,
-      `💬 Odpověď klienta: ${name} (${number})\n📍 ${(viewing as { address: string }).address}\n→ ${confirmedLabel}\n${reason}`
-    ).catch(() => {});
+    await notify(settings, `Odpověď klienta – ${name}`, `💬 Odpověď klienta: ${name} (${number})\n📍 ${(viewing as { address: string }).address}\n→ ${confirmedLabel}\n${reason}`);
   }
 
   return NextResponse.json({ ok: true, intent, status: newStatus ?? "unchanged" });

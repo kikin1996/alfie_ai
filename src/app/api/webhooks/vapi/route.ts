@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { notify } from "@/lib/notify";
 
 // Heuristika z N8N: rozpoznání potvrzení/odmítnutí z transkriptu
 function parseVapiResult(transcript: string, summary: string): { confirmed: boolean; declined: boolean } {
@@ -81,17 +81,13 @@ export async function POST(request: NextRequest) {
   // Telegram notifikace
   const { data: settings } = await supabaseAdmin
     .from("user_settings")
-    .select("whatsapp_phone, whatsapp_apikey")
+    .select("whatsapp_phone, whatsapp_apikey, notification_channel, notification_email")
     .eq("user_id", viewing.user_id)
     .maybeSingle();
 
-  if (settings?.whatsapp_phone && settings?.whatsapp_apikey) {
+  if (settings) {
     const label = confirmed ? "✅ ANO" : declined ? "❌ NE" : "❓ MOŽNÁ";
-    await sendWhatsAppMessage(
-      settings.whatsapp_phone,
-      settings.whatsapp_apikey,
-      `📞 VAPI hovor ukončen: ${viewing.client_name || phoneE164}\n📍 ${viewing.address}\n→ ${label}`
-    ).catch(() => {});
+    await notify(settings, `Výsledek hovoru – ${viewing.client_name || phoneE164}`, `📞 VAPI hovor ukončen: ${viewing.client_name || phoneE164}\n📍 ${viewing.address}\n→ ${label}`);
   }
 
   return NextResponse.json({ ok: true, confirmed, declined });

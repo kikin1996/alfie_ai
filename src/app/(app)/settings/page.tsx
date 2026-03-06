@@ -34,8 +34,10 @@ const schema = z.object({
   agencyName: z.string().optional(),
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
+  notificationChannel: z.enum(["whatsapp", "email", "both"]),
   whatsappPhone: z.string().optional(),
   whatsappApikey: z.string().optional(),
+  notificationEmail: z.string().email("Zadejte platný email").optional().or(z.literal("")),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -61,8 +63,10 @@ export default function SettingsPage() {
       agencyName: "",
       triggerKeyword: "#prohlidka",
       smsTemplate: defaultTemplate,
+      notificationChannel: "whatsapp",
       whatsappPhone: "",
       whatsappApikey: "",
+      notificationEmail: "",
     },
   });
 
@@ -77,7 +81,7 @@ export default function SettingsPage() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, agency_name, trigger_keyword, sms_template, whatsapp_phone, whatsapp_apikey")
+            .select("broker_name, agency_name, trigger_keyword, sms_template, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -89,8 +93,10 @@ export default function SettingsPage() {
             agencyName: data.agency_name ?? "",
             triggerKeyword: data.trigger_keyword ?? "#prohlidka",
             smsTemplate: data.sms_template ?? defaultTemplate,
+            notificationChannel: (data.notification_channel as "whatsapp" | "email" | "both") ?? "whatsapp",
             whatsappPhone: data.whatsapp_phone ?? "",
             whatsappApikey: data.whatsapp_apikey ?? "",
+            notificationEmail: data.notification_email ?? "",
           });
         }
         setCalendarConnected(calendarRes.connected ?? false);
@@ -118,8 +124,10 @@ export default function SettingsPage() {
           agency_name: values.agencyName || null,
           trigger_keyword: values.triggerKeyword,
           sms_template: values.smsTemplate,
+          notification_channel: values.notificationChannel,
           whatsapp_phone: values.whatsappPhone || null,
           whatsapp_apikey: values.whatsappApikey || null,
+          notification_email: values.notificationEmail || null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -160,7 +168,7 @@ export default function SettingsPage() {
         Nastavení
       </h1>
       <p className="text-muted-foreground mb-6">
-        Kalendář, šablona SMS a WhatsApp notifikace.
+        Kalendář, šablona SMS a notifikace (WhatsApp nebo email).
       </p>
 
       {calendarMessage && (
@@ -280,42 +288,92 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* WhatsApp */}
+        {/* Notifikace */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Send className="h-5 w-5" />
-              WhatsApp notifikace
+              Notifikace makléře
             </CardTitle>
             <CardDescription>
-              Dostanete WhatsApp zprávu při každé odeslané SMS nebo odpovědi klienta.
-              Aktivace: přidejte <strong>+34 644 95 73 56</strong> do kontaktů a pošlete na toto číslo zprávu{" "}
-              <em>„I allow callmebot to send me messages"</em>. API klíč dostanete odpovědí.
+              Vyberte, jak chcete dostávat upozornění o odeslaných SMS a odpovědích klientů.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-5">
+            {/* Výběr kanálu */}
             <div>
-              <Label htmlFor="whatsappPhone">Vaše telefonní číslo (s předvolbou)</Label>
-              <Input
-                id="whatsappPhone"
-                {...form.register("whatsappPhone")}
-                placeholder="+420777888999"
-                className="mt-1"
-              />
+              <Label className="mb-2 block">Způsob notifikací</Label>
+              <div className="flex gap-2">
+                {(["whatsapp", "email", "both"] as const).map((ch) => (
+                  <button
+                    key={ch}
+                    type="button"
+                    onClick={() => form.setValue("notificationChannel", ch)}
+                    className={`px-3 py-1.5 rounded-full text-sm border transition-all ${
+                      form.watch("notificationChannel") === ch
+                        ? "bg-navy text-white border-navy"
+                        : "bg-muted text-muted-foreground border-border hover:border-muted-foreground/40"
+                    }`}
+                  >
+                    {ch === "whatsapp" ? "WhatsApp" : ch === "email" ? "Email" : "WhatsApp + Email"}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div>
-              <Label htmlFor="whatsappApikey">CallMeBot API klíč</Label>
-              <Input
-                id="whatsappApikey"
-                type="password"
-                {...form.register("whatsappApikey")}
-                placeholder="1234567"
-                className="mt-1"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                API klíč obdržíte jako WhatsApp odpověď od CallMeBot.
-              </p>
-            </div>
+
+            {/* WhatsApp pole */}
+            {["whatsapp", "both"].includes(form.watch("notificationChannel")) && (
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <p className="text-xs text-muted-foreground">
+                  Aktivace: přidejte <strong>+34 644 95 73 56</strong> do kontaktů a pošlete zprávu{" "}
+                  <em>„I allow callmebot to send me messages"</em>. API klíč dostanete odpovědí.
+                </p>
+                <div>
+                  <Label htmlFor="whatsappPhone">Vaše tel. číslo (s předvolbou)</Label>
+                  <Input
+                    id="whatsappPhone"
+                    {...form.register("whatsappPhone")}
+                    placeholder="+420777888999"
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="whatsappApikey">CallMeBot API klíč</Label>
+                  <Input
+                    id="whatsappApikey"
+                    type="password"
+                    {...form.register("whatsappApikey")}
+                    placeholder="1234567"
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Email pole */}
+            {["email", "both"].includes(form.watch("notificationChannel")) && (
+              <div className="space-y-3 rounded-lg border border-border p-3">
+                <p className="text-xs text-muted-foreground">
+                  Notifikace se odešlou na váš email přes Resend. Vyžaduje ENV proměnnou{" "}
+                  <code className="bg-muted px-1 rounded">RESEND_API_KEY</code>.
+                </p>
+                <div>
+                  <Label htmlFor="notificationEmail">Email pro notifikace</Label>
+                  <Input
+                    id="notificationEmail"
+                    type="email"
+                    {...form.register("notificationEmail")}
+                    placeholder="maklér@example.com"
+                    className="mt-1"
+                  />
+                  {form.formState.errors.notificationEmail && (
+                    <p className="text-sm text-destructive mt-1">
+                      {form.formState.errors.notificationEmail.message}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
