@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Settings, LayoutDashboard, LogOut, ShieldCheck } from "lucide-react";
+import { CalendarDays, Settings, LayoutDashboard, LogOut, ShieldCheck, Coins } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -14,9 +15,18 @@ const navItems = [
 export default function Navbar() {
   const pathname = usePathname();
   const { signOut, user } = useAuth();
+  const [credits, setCredits] = useState<number | null>(null);
 
   const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL;
   const isAdmin = adminEmail && user?.email === adminEmail;
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/subscription")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setCredits(data.credits_remaining ?? null); })
+      .catch(() => {});
+  }, [user]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
@@ -48,6 +58,22 @@ export default function Navbar() {
               </Link>
             );
           })}
+
+          <Link
+            href="/subscription"
+            className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
+              pathname === "/subscription"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            }`}
+          >
+            <Coins className="h-4 w-4" />
+            {credits !== null ? (
+              <span>{credits} kr.</span>
+            ) : (
+              "Předplatné"
+            )}
+          </Link>
 
           {isAdmin && (
             <Link

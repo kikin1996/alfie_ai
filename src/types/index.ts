@@ -48,6 +48,28 @@ export interface UserSettings {
   updatedAt: string
 }
 
+export interface SubscriptionPlan {
+  id: string
+  name: string
+  priceCzk: number
+  creditsPerMonth: number
+  description: string
+  sortOrder: number
+}
+
+export interface UserSubscription {
+  id: string
+  userId: string
+  planId: string
+  plan?: SubscriptionPlan
+  creditsRemaining: number
+  periodStart: string
+  periodEnd: string
+  status: "active" | "cancelled" | "expired"
+  createdAt: string
+  updatedAt: string
+}
+
 export interface ParsedCalendarEvent {
   id: string
   summary: string
