@@ -553,7 +553,7 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-2xl font-display font-semibold text-navy">Prohlídky</h1>
             <p className="text-muted-foreground text-sm">
-              Přehled z kalendáře – načtěte události tlačítkem níže.
+              Přehled prohlídek z Google Kalendáře.
             </p>
           </div>
         </div>
@@ -575,7 +575,7 @@ export default function DashboardPage() {
             ) : (
               <RefreshCw className="h-4 w-4 mr-2" />
             )}
-            Načíst prohlídky z kalendáře
+            Aktualizovat události
           </Button>
           {viewings.length > 0 && (
             <div className="flex gap-1">
@@ -605,7 +605,7 @@ export default function DashboardPage() {
           <CardContent className="py-12 text-center text-muted-foreground">
             Zatím nemáte žádné prohlídky. Přidejte do Google Kalendáře události s klíčovým
             slovem (např. #prohlidka) a formátem: Tel: +420… Adresa: … Poté klikněte na
-            „Načíst prohlídky z kalendáře".
+            „Aktualizovat události".
           </CardContent>
         </Card>
       ) : viewMode === "calendar" ? (
