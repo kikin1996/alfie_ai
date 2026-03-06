@@ -4,6 +4,15 @@ import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { parseCalendarEvent, eventMatchesTrigger } from "@/lib/calendarParser";
 import { geminiParseEvent } from "@/lib/geminiParseEvent";
+import { notify } from "@/lib/notify";
+import { format } from "date-fns";
+import { cs } from "date-fns/locale";
+
+function isMissingPhone(phone: string | null | undefined): boolean {
+  if (!phone) return true;
+  const p = phone.trim();
+  return !p || p === "—" || p === "-";
+}
 
 /**
  * POST /api/sync-calendar
@@ -40,7 +49,7 @@ export async function POST() {
 
   const { data: settings } = await supabaseAdmin
     .from("user_settings")
-    .select("trigger_keyword, google_refresh_token")
+    .select("trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email")
     .eq("user_id", session.user.id)
     .maybeSingle();
 
@@ -61,6 +70,7 @@ export async function POST() {
   const keyword = (settings.trigger_keyword ?? "#prohlidka").trim();
 
   let synced = 0;
+  const missingPhoneItems: { address: string; start: string }[] = [];
   try {
     const { data: events } = await calendar.events.list({
       calendarId: "primary",
@@ -121,6 +131,9 @@ export async function POST() {
         },
         { onConflict: "user_id,calendar_event_id" }
       );
+      if (isMissingPhone(parsed.clientPhone)) {
+        missingPhoneItems.push({ address: parsed.address, start: parsed.start });
+      }
       synced++;
     }
   } catch (err) {
@@ -131,5 +144,17 @@ export async function POST() {
     );
   }
 
-  return NextResponse.json({ ok: true, synced });
+  // Upozornění na chybějící telefonní čísla
+  if (missingPhoneItems.length > 0 && settings) {
+    const list = missingPhoneItems
+      .map((v) => `• ${v.address} (${format(new Date(v.start), "d.M. HH:mm", { locale: cs })})`)
+      .join("\n");
+    await notify(
+      settings,
+      `⚠️ Chybí tel. číslo u ${missingPhoneItems.length} prohlídky`,
+      `⚠️ Nové prohlídky bez telefonního čísla:\n${list}\n\nDoplňte číslo klienta v Google Kalendáři nebo prohlídku zrušte.`
+    ).catch(() => {});
+  }
+
+  return NextResponse.json({ ok: true, synced, missingPhone: missingPhoneItems.length });
 }

@@ -3,6 +3,15 @@ import { google } from "googleapis";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { parseCalendarEvent, eventMatchesTrigger } from "@/lib/calendarParser";
 import { geminiParseEvent } from "@/lib/geminiParseEvent";
+import { notify } from "@/lib/notify";
+import { format } from "date-fns";
+import { cs } from "date-fns/locale";
+
+function isMissingPhone(phone: string | null | undefined): boolean {
+  if (!phone) return true;
+  const p = phone.trim();
+  return !p || p === "—" || p === "-";
+}
 
 function checkCronAuth(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET;
@@ -40,7 +49,7 @@ export async function GET(request: NextRequest) {
 
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, trigger_keyword, google_refresh_token")
+    .select("user_id, trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email")
     .not("google_refresh_token", "is", null);
 
   if (!settingsList?.length) {
@@ -60,7 +69,12 @@ export async function GET(request: NextRequest) {
     user_id: string;
     trigger_keyword: string;
     google_refresh_token: string;
+    whatsapp_phone?: string;
+    whatsapp_apikey?: string;
+    notification_channel?: string;
+    notification_email?: string;
   }[]) {
+    const missingPhoneItems: { address: string; start: string }[] = [];
     try {
       oauth2Client.setCredentials({ refresh_token: row.google_refresh_token });
       const { data: events } = await calendar.events.list({
@@ -124,7 +138,18 @@ export async function GET(request: NextRequest) {
           },
           { onConflict: "user_id,calendar_event_id" }
         );
+        if (isMissingPhone(parsed.clientPhone)) {
+          missingPhoneItems.push({ address: parsed.address, start: parsed.start });
+        }
         totalSynced++;
+      }
+
+      // Upozornění na chybějící telefonní čísla
+      if (missingPhoneItems.length > 0) {
+        const list = missingPhoneItems
+          .map((v) => `• ${v.address} (${format(new Date(v.start), "d.M. HH:mm", { locale: cs })})`)
+          .join("\n");
+        await notify(row, `⚠️ Chybí tel. číslo u ${missingPhoneItems.length} prohlídky`, `⚠️ Nové prohlídky bez telefonního čísla:\n${list}\n\nDoplňte číslo klienta v Google Kalendáři nebo prohlídku zrušte.`).catch(() => {});
       }
     } catch (err) {
       console.error(`Sync calendar for user ${row.user_id}:`, err);
