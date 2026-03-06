@@ -31,6 +31,7 @@ import Link from "next/link";
 
 const schema = z.object({
   brokerName: z.string().optional(),
+  brokerPhone: z.string().optional(),
   agencyName: z.string().optional(),
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
@@ -60,6 +61,7 @@ export default function SettingsPage() {
     resolver: zodResolver(schema),
     defaultValues: {
       brokerName: "",
+      brokerPhone: "",
       agencyName: "",
       triggerKeyword: "#prohlidka",
       smsTemplate: defaultTemplate,
@@ -81,7 +83,7 @@ export default function SettingsPage() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, agency_name, trigger_keyword, sms_template, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
+            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -90,6 +92,7 @@ export default function SettingsPage() {
         if (data) {
           form.reset({
             brokerName: data.broker_name ?? "",
+            brokerPhone: data.broker_phone ?? "",
             agencyName: data.agency_name ?? "",
             triggerKeyword: data.trigger_keyword ?? "#prohlidka",
             smsTemplate: data.sms_template ?? defaultTemplate,
@@ -121,6 +124,7 @@ export default function SettingsPage() {
         {
           user_id: user.id,
           broker_name: values.brokerName || null,
+          broker_phone: values.brokerPhone || null,
           agency_name: values.agencyName || null,
           trigger_keyword: values.triggerKeyword,
           sms_template: values.smsTemplate,
@@ -187,8 +191,9 @@ export default function SettingsPage() {
               Profil makléře
             </CardTitle>
             <CardDescription>
-              Používá se v hlasových hovorech VAPI jako proměnné{" "}
-              <code className="text-xs bg-muted px-1 rounded">{"{{brokerName}}"}</code> a{" "}
+              Používá se v SMS i hlasových hovorech VAPI jako proměnné{" "}
+              <code className="text-xs bg-muted px-1 rounded">{"{{brokerName}}"}</code>,{" "}
+              <code className="text-xs bg-muted px-1 rounded">{"{{brokerPhone}}"}</code> a{" "}
               <code className="text-xs bg-muted px-1 rounded">{"{{agencyName}}"}</code>.
             </CardDescription>
           </CardHeader>
@@ -199,6 +204,15 @@ export default function SettingsPage() {
                 id="brokerName"
                 {...form.register("brokerName")}
                 placeholder="Jan Novák"
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="brokerPhone">Telefon makléře</Label>
+              <Input
+                id="brokerPhone"
+                {...form.register("brokerPhone")}
+                placeholder="+420 123 456 789"
                 className="mt-1"
               />
             </div>

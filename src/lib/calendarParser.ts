@@ -12,6 +12,70 @@ import type { ParsedCalendarEvent } from "@/types"
 const TEL_REGEX = /Tel:\s*([+\d\s\-()]+)/i
 const ADRESA_REGEX = /Adresa:\s*(.+?)(?=\s+Tel:|\s+Adresa:|$)/is
 
+export function normalizePhone(phone: string): string {
+  const p = phone.trim()
+  if (!p || p === "—" || p === "-") return p
+  // Already has country code
+  if (p.startsWith("+")) return p
+  // Czech local format starting with 0 (e.g. 0123456789)
+  if (p.startsWith("0")) return "+420" + p.slice(1)
+  // 9-digit number without prefix
+  const digits = p.replace(/\D/g, "")
+  if (digits.length === 9) return "+420" + digits
+  return p
+}
+
+const NAME_PLACEHOLDERS = ["klient", "—", "-", "client", "test", "unknown", "neznámý", "jméno", "name", "kontakt"]
+
+function toTitleCase(s: string): string {
+  return s.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ")
+}
+
+/**
+ * Zkontroluje jméno klienta.
+ * - suspicious: true + fixedName → drobná chyba, oprav automaticky
+ * - suspicious: true, bez fixedName → nejasná chyba, upozorni makléře
+ * - suspicious: false → vše ok
+ */
+export function isSuspiciousClientName(name: string): { suspicious: boolean; reason?: string; fixedName?: string } {
+  const n = name.trim()
+
+  // Zástupný symbol – nelze opravit, upozornit
+  if (!n || NAME_PLACEHOLDERS.includes(n.toLowerCase())) {
+    return { suspicious: true, reason: "vypadá jako zástupný symbol" }
+  }
+  // Příliš krátké – nelze opravit, upozornit
+  if (n.replace(/\s/g, "").length < 3) {
+    return { suspicious: true, reason: "příliš krátké" }
+  }
+  // Číslice – nelze opravit, upozornit
+  if (/\d/.test(n)) {
+    return { suspicious: true, reason: "obsahuje číslice" }
+  }
+  // E-mail – nelze opravit, upozornit
+  if (n.includes("@")) {
+    return { suspicious: true, reason: "vypadá jako e-mail" }
+  }
+
+  // Celé velkými písmeny → opravit na Title Case
+  if (n.length > 3 && n === n.toUpperCase() && /[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/.test(n)) {
+    return { suspicious: true, reason: "celé velkými písmeny", fixedName: toTitleCase(n) }
+  }
+  // Celé malými písmeny → opravit na Title Case
+  if (n.length > 3 && n === n.toLowerCase() && /[a-záčďéěíňóřšťúůýž]/.test(n)) {
+    return { suspicious: true, reason: "začíná malým písmenem", fixedName: toTitleCase(n) }
+  }
+  // Opakující se znaky (překlep) → odstranit duplikáty
+  if (/(.)\1+/.test(n)) {
+    const fixed = toTitleCase(n.replace(/(.)\1+/g, "$1"))
+    if (fixed !== n) {
+      return { suspicious: true, reason: "obsahuje opakující se znaky", fixedName: fixed }
+    }
+  }
+
+  return { suspicious: false }
+}
+
 export function eventMatchesTrigger(
   summary: string,
   description: string,
@@ -38,7 +102,7 @@ export function parseCalendarEvent(
   const telMatch = fullText.match(TEL_REGEX)
   const adresaMatch = fullText.match(ADRESA_REGEX)
 
-  let clientPhone = telMatch ? telMatch[1].trim() : ""
+  let clientPhone = telMatch ? normalizePhone(telMatch[1].trim()) : ""
   let address = adresaMatch ? adresaMatch[1].trim() : (location || "").trim()
 
   // Fallback: title like "Jiří Novák, Adresa, 123 456 789, #prohlidka"
@@ -53,7 +117,7 @@ export function parseCalendarEvent(
     if (!clientPhone) {
       const phonePart =
         parts.find((p) => p.replace(/\D/g, "").length >= 9) || ""
-      if (phonePart) clientPhone = phonePart
+      if (phonePart) clientPhone = normalizePhone(phonePart)
     }
 
     if (!address) {

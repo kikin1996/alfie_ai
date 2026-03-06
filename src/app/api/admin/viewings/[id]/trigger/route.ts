@@ -6,11 +6,13 @@ import { initiateVapiCall } from "@/lib/vapi";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
 
-function fillTemplate(template: string, address: string, time: string, clientName: string) {
+function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string) {
   return template
     .replace(/\{address\}/g, address)
     .replace(/\{time\}/g, time)
-    .replace(/\{clientName\}/g, clientName);
+    .replace(/\{clientName\}/g, clientName)
+    .replace(/\{brokerName\}/g, brokerName)
+    .replace(/\{brokerPhone\}/g, brokerPhone);
 }
 
 export async function POST(
@@ -57,7 +59,7 @@ export async function POST(
   // Načíst user_settings
   const { data: userSettings } = await supabaseAdmin
     .from("user_settings")
-    .select("sms_template, broker_name, agency_name")
+    .select("sms_template, broker_name, broker_phone, agency_name")
     .eq("user_id", viewing.user_id)
     .maybeSingle();
 
@@ -71,7 +73,7 @@ export async function POST(
     }
     const template = userSettings?.sms_template ??
       "Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.";
-    const body = fillTemplate(template, viewing.address, timeStr, name);
+    const body = fillTemplate(template, viewing.address, timeStr, name, userSettings?.broker_name ?? "", userSettings?.broker_phone ?? "");
     const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, viewing.client_phone, body).catch(() => false);
     if (!sent) return NextResponse.json({ error: "SMS se nepodařilo odeslat" }, { status: 500 });
     return NextResponse.json({ ok: true, message: `SMS odeslána na ${viewing.client_phone}` });
@@ -91,6 +93,7 @@ export async function POST(
       address: viewing.address,
       startISO: eventStart.toISOString(),
       brokerName: userSettings?.broker_name ?? "",
+      brokerPhone: userSettings?.broker_phone ?? "",
       agencyName: userSettings?.agency_name ?? "",
       minutesBefore: appConfig.vapi_minutes_before ?? 30,
     }).catch(() => null);

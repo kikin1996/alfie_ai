@@ -14,11 +14,13 @@ function checkCronAuth(request: NextRequest): boolean {
   return header === `Bearer ${secret}`;
 }
 
-function fillTemplate(template: string, address: string, time: string, clientName: string): string {
+function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string): string {
   return template
     .replace(/\{address\}/g, address)
     .replace(/\{time\}/g, time)
-    .replace(/\{clientName\}/g, clientName);
+    .replace(/\{clientName\}/g, clientName)
+    .replace(/\{brokerName\}/g, brokerName)
+    .replace(/\{brokerPhone\}/g, brokerPhone);
 }
 
 export async function GET(request: NextRequest) {
@@ -60,7 +62,7 @@ export async function GET(request: NextRequest) {
   const userIds = [...new Set(viewings.map((v) => v.user_id))];
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, sms_template, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, agency_name")
+    .select("user_id, sms_template, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
     .in("user_id", userIds);
 
   const settingsByUser = new Map((settingsList ?? []).map((s) => [s.user_id, s]));
@@ -83,11 +85,13 @@ export async function GET(request: NextRequest) {
     const name = v.client_name || "Klient";
     const template = userSettings?.sms_template ??
       "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";
+    const brokerName = userSettings?.broker_name ?? "";
+    const brokerPhone = userSettings?.broker_phone ?? "";
 
 
     // Okno 2h (100–140 min)
     if (!v.sms2h_sent && v.sms2h_enabled && diffMinutes >= 100 && diffMinutes <= 140 && hasSms) {
-      const body = fillTemplate(template, v.address, timeStr, name);
+      const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone);
       const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
       if (sent) {
         await supabaseAdmin.from("viewings").update({ sms2h_sent: true, status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
@@ -98,7 +102,7 @@ export async function GET(request: NextRequest) {
 
     // Okno 1h (40–80 min)
     if (!v.sms1h_sent && v.sms1h_enabled && diffMinutes >= 40 && diffMinutes <= 80 && hasSms) {
-      const body = fillTemplate("Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.", v.address, timeStr, name);
+      const body = fillTemplate("Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.", v.address, timeStr, name, brokerName, brokerPhone);
       const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
       if (sent) {
         await supabaseAdmin.from("viewings").update({ sms1h_sent: true, updated_at: now.toISOString() }).eq("id", v.id);
@@ -109,7 +113,7 @@ export async function GET(request: NextRequest) {
 
     // Okno VAPI hovoru (vapiMinutesBefore ± 10 min)
     if (!v.vapi_called && v.vapi_enabled && diffMinutes >= vapiWindowLow && diffMinutes <= vapiWindowHigh && hasVapi) {
-      const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName: userSettings?.broker_name ?? "", agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
+      const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
       if (callId) {
         await supabaseAdmin.from("viewings").update({ vapi_called: true, updated_at: now.toISOString() }).eq("id", v.id);
         if (userSettings) await notify(userSettings, `VAPI hovor spuštěn – ${name}`, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);
@@ -131,7 +135,7 @@ export async function GET(request: NextRequest) {
       if (diffMinutes < windowLow || diffMinutes > windowHigh) continue;
 
       if (notif.type === "sms" && hasSms) {
-        const body = fillTemplate(template, v.address, timeStr, name);
+        const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone);
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
           updatedExtras[i] = { ...notif, sent: true };
@@ -140,7 +144,7 @@ export async function GET(request: NextRequest) {
           actions++;
         }
       } else if (notif.type === "vapi" && hasVapi) {
-        const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName: userSettings?.broker_name ?? "", agencyName: userSettings?.agency_name ?? "", minutesBefore: notif.minutesBefore }).catch(() => null);
+        const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: notif.minutesBefore }).catch(() => null);
         if (callId) {
           updatedExtras[i] = { ...notif, sent: true };
           extrasUpdated = true;

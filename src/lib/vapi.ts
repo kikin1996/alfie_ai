@@ -11,6 +11,7 @@ export async function initiateVapiCall(opts: {
   address: string;
   startISO: string;
   brokerName?: string;
+  brokerPhone?: string;
   agencyName?: string;
   minutesBefore?: number;
 }): Promise<string> {
@@ -41,6 +42,7 @@ export async function initiateVapiCall(opts: {
       assistantOverrides: {
         variableValues: {
           brokerName: opts.brokerName ?? "",
+          brokerPhone: opts.brokerPhone ?? "",
           agencyName: opts.agencyName ?? "",
           clientName: opts.name,
           address: opts.address,

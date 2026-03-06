@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { google } from "googleapis";
 import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { parseCalendarEvent, eventMatchesTrigger } from "@/lib/calendarParser";
+import { parseCalendarEvent, eventMatchesTrigger, normalizePhone, isSuspiciousClientName } from "@/lib/calendarParser";
 import { geminiParseEvent } from "@/lib/geminiParseEvent";
 import { notify } from "@/lib/notify";
 import { format } from "date-fns";
@@ -71,6 +71,7 @@ export async function POST() {
 
   let synced = 0;
   const missingPhoneItems: { address: string; start: string }[] = [];
+  const suspiciousNameItems: { address: string; start: string; name: string; reason: string }[] = [];
   try {
     const { data: events } = await calendar.events.list({
       calendarId: "primary",
@@ -111,12 +112,15 @@ export async function POST() {
             start,
             end: end ?? start,
             address: gemini.address || "—",
-            clientPhone: gemini.clientPhone || "—",
+            clientPhone: normalizePhone(gemini.clientPhone || "—"),
             clientName: gemini.clientName || "Klient",
           };
         }
       }
       if (!parsed) continue;
+
+      const nameCheck = isSuspiciousClientName(parsed.clientName);
+      const clientName = nameCheck.fixedName ?? parsed.clientName;
 
       await supabaseAdmin.from("viewings").upsert(
         {
@@ -124,7 +128,7 @@ export async function POST() {
           calendar_event_id: ev.id,
           address: parsed.address,
           client_phone: parsed.clientPhone,
-          client_name: parsed.clientName,
+          client_name: clientName,
           event_start: parsed.start,
           event_end: parsed.end,
           updated_at: new Date().toISOString(),
@@ -133,6 +137,10 @@ export async function POST() {
       );
       if (isMissingPhone(parsed.clientPhone)) {
         missingPhoneItems.push({ address: parsed.address, start: parsed.start });
+      }
+      // Upozornit pouze na neopravitelné chyby (bez fixedName)
+      if (nameCheck.suspicious && !nameCheck.fixedName) {
+        suspiciousNameItems.push({ address: parsed.address, start: parsed.start, name: parsed.clientName, reason: nameCheck.reason ?? "" });
       }
       synced++;
     }
@@ -156,5 +164,13 @@ export async function POST() {
     ).catch(() => {});
   }
 
-  return NextResponse.json({ ok: true, synced, missingPhone: missingPhoneItems.length });
+  // Upozornění na podezřelá jména klientů
+  if (suspiciousNameItems.length > 0 && settings) {
+    const list = suspiciousNameItems
+      .map((v) => `• „${v.name}" – ${v.reason}\n  ${v.address} (${format(new Date(v.start), "d.M. HH:mm", { locale: cs })})`)
+      .join("\n");
+    await notify(settings, `⚠️ Zkontrolujte jména klientů (${suspiciousNameItems.length})`, `⚠️ U těchto prohlídek vypadá jméno klienta podezřele – zkontrolujte prosím v kalendáři:\n\n${list}`).catch(() => {});
+  }
+
+  return NextResponse.json({ ok: true, synced, missingPhone: missingPhoneItems.length, suspiciousNames: suspiciousNameItems.length });
 }

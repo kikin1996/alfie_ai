@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "googleapis";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
-import { parseCalendarEvent, eventMatchesTrigger } from "@/lib/calendarParser";
+import { parseCalendarEvent, eventMatchesTrigger, normalizePhone, isSuspiciousClientName } from "@/lib/calendarParser";
 import { geminiParseEvent } from "@/lib/geminiParseEvent";
 import { notify } from "@/lib/notify";
 import { format } from "date-fns";
@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
     notification_email?: string;
   }[]) {
     const missingPhoneItems: { address: string; start: string }[] = [];
+      const suspiciousNameItems: { address: string; start: string; name: string; reason: string }[] = [];
     try {
       oauth2Client.setCredentials({ refresh_token: row.google_refresh_token });
       const { data: events } = await calendar.events.list({
@@ -118,12 +119,15 @@ export async function GET(request: NextRequest) {
               start,
               end: end ?? start,
               address: gemini.address || "—",
-              clientPhone: gemini.clientPhone || "—",
+              clientPhone: normalizePhone(gemini.clientPhone || "—"),
               clientName: gemini.clientName || "Klient",
             };
           }
         }
         if (!parsed) continue;
+
+        const nameCheck = isSuspiciousClientName(parsed.clientName);
+        const clientName = nameCheck.fixedName ?? parsed.clientName;
 
         await supabaseAdmin.from("viewings").upsert(
           {
@@ -131,7 +135,7 @@ export async function GET(request: NextRequest) {
             calendar_event_id: ev.id,
             address: parsed.address,
             client_phone: parsed.clientPhone,
-            client_name: parsed.clientName,
+            client_name: clientName,
             event_start: parsed.start,
             event_end: parsed.end,
             updated_at: new Date().toISOString(),
@@ -140,6 +144,10 @@ export async function GET(request: NextRequest) {
         );
         if (isMissingPhone(parsed.clientPhone)) {
           missingPhoneItems.push({ address: parsed.address, start: parsed.start });
+        }
+        // Upozornit pouze na neopravitelné chyby (bez fixedName)
+        if (nameCheck.suspicious && !nameCheck.fixedName) {
+          suspiciousNameItems.push({ address: parsed.address, start: parsed.start, name: parsed.clientName, reason: nameCheck.reason ?? "" });
         }
         totalSynced++;
       }
@@ -150,6 +158,14 @@ export async function GET(request: NextRequest) {
           .map((v) => `• ${v.address} (${format(new Date(v.start), "d.M. HH:mm", { locale: cs })})`)
           .join("\n");
         await notify(row, `⚠️ Chybí tel. číslo u ${missingPhoneItems.length} prohlídky`, `⚠️ Nové prohlídky bez telefonního čísla:\n${list}\n\nDoplňte číslo klienta v Google Kalendáři nebo prohlídku zrušte.`).catch(() => {});
+      }
+
+      // Upozornění na podezřelá jména klientů
+      if (suspiciousNameItems.length > 0) {
+        const list = suspiciousNameItems
+          .map((v) => `• „${v.name}" – ${v.reason}\n  ${v.address} (${format(new Date(v.start), "d.M. HH:mm", { locale: cs })})`)
+          .join("\n");
+        await notify(row, `⚠️ Zkontrolujte jména klientů (${suspiciousNameItems.length})`, `⚠️ U těchto prohlídek vypadá jméno klienta podezřele – zkontrolujte prosím v kalendáři:\n\n${list}`).catch(() => {});
       }
     } catch (err) {
       console.error(`Sync calendar for user ${row.user_id}:`, err);
