@@ -22,6 +22,9 @@ import {
   XCircle,
   Plus,
   X,
+  MessageSquare,
+  Phone,
+  CheckCircle,
 } from "lucide-react";
 
 const statusLabels: Record<ViewingStatus, string> = {
@@ -225,9 +228,26 @@ function AddNotifPanel({ onAdd, onClose }: AddNotifPanelProps) {
 // ViewingCard – stateful karta prohlídky
 // ---------------------------------------------------------------------------
 
-function ViewingCard({ viewing: initial }: { viewing: Viewing }) {
+function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin: boolean }) {
   const [viewing, setViewing] = useState<Viewing>(initial);
   const [addingNotif, setAddingNotif] = useState(false);
+  const [triggerState, setTriggerState] = useState<Record<string, "idle" | "busy" | "ok" | "err">>({});
+
+  const trigger = async (action: "sms" | "vapi") => {
+    setTriggerState((s) => ({ ...s, [action]: "busy" }));
+    try {
+      const res = await fetch(`/api/admin/viewings/${viewing.id}/trigger`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      setTriggerState((s) => ({ ...s, [action]: res.ok ? "ok" : "err" }));
+      setTimeout(() => setTriggerState((s) => ({ ...s, [action]: "idle" })), 3000);
+    } catch {
+      setTriggerState((s) => ({ ...s, [action]: "err" }));
+      setTimeout(() => setTriggerState((s) => ({ ...s, [action]: "idle" })), 3000);
+    }
+  };
 
   const patchNotification = useCallback(
     async (body: Record<string, unknown>) => {
@@ -372,6 +392,55 @@ function ViewingCard({ viewing: initial }: { viewing: Viewing }) {
             />
           )}
         </div>
+
+        {/* Admin: manuální spuštění */}
+        {isAdmin && (
+          <div className="pt-2 border-t border-border/50 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              onClick={() => trigger("sms")}
+              disabled={triggerState.sms === "busy"}
+              className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border transition-all ${
+                triggerState.sms === "ok"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : triggerState.sms === "err"
+                  ? "bg-destructive/10 text-destructive border-destructive/20"
+                  : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+              }`}
+            >
+              {triggerState.sms === "busy" ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : triggerState.sms === "ok" ? (
+                <CheckCircle className="h-3 w-3" />
+              ) : (
+                <MessageSquare className="h-3 w-3" />
+              )}
+              {triggerState.sms === "ok" ? "SMS odeslána" : triggerState.sms === "err" ? "Chyba SMS" : "Test SMS 1h"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => trigger("vapi")}
+              disabled={triggerState.vapi === "busy"}
+              className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border transition-all ${
+                triggerState.vapi === "ok"
+                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  : triggerState.vapi === "err"
+                  ? "bg-destructive/10 text-destructive border-destructive/20"
+                  : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+              }`}
+            >
+              {triggerState.vapi === "busy" ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : triggerState.vapi === "ok" ? (
+                <CheckCircle className="h-3 w-3" />
+              ) : (
+                <Phone className="h-3 w-3" />
+              )}
+              {triggerState.vapi === "ok" ? "Hovor zahájen" : triggerState.vapi === "err" ? "Chyba hovoru" : "Test volání 30min"}
+            </button>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -385,6 +454,7 @@ type ViewMode = "list" | "calendar";
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
+  const isAdmin = !!process.env.NEXT_PUBLIC_ADMIN_EMAIL && user?.email === process.env.NEXT_PUBLIC_ADMIN_EMAIL;
   const [viewings, setViewings] = useState<Viewing[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
@@ -547,7 +617,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-medium text-navy mb-3">Nadcházející</h2>
               <div className="grid gap-3">
                 {upcoming.map((v) => (
-                  <ViewingCard key={v.id} viewing={v} />
+                  <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} />
                 ))}
               </div>
             </section>
@@ -559,7 +629,7 @@ export default function DashboardPage() {
               </h2>
               <div className="grid gap-3">
                 {past.map((v) => (
-                  <ViewingCard key={v.id} viewing={v} />
+                  <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} />
                 ))}
               </div>
             </section>
