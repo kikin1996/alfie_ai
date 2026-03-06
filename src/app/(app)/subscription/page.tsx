@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -19,18 +20,21 @@ function PlanIcon({ planId }: { planId: string }) {
 }
 
 const PLAN_FEATURES: Record<string, string[]> = {
-  starter: ["50 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Emailová podpora"],
-  pro: ["200 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Prioritní podpora"],
-  business: ["600 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Dedikovaná podpora"],
+  starter: ["30 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Emailová podpora"],
+  pro: ["50 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Prioritní podpora"],
+  business: ["100 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Dedikovaná podpora"],
 };
 
 export default function SubscriptionPage() {
+  const searchParams = useSearchParams();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
-  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [redirecting, setRedirecting] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+
+  const successParam = searchParams?.get("success");
+  const cancelledParam = searchParams?.get("cancelled");
 
   useEffect(() => {
     async function load() {
@@ -54,28 +58,26 @@ export default function SubscriptionPage() {
   }, []);
 
   const handleSelect = async (planId: string) => {
-    if (upgrading) return;
-    setUpgrading(planId);
+    if (redirecting) return;
+    setRedirecting(planId);
     setError(null);
-    setSuccess(null);
     try {
-      const res = await fetch("/api/subscription", {
+      const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(data.error ?? "Chyba při změně plánu.");
-      } else {
-        const data = await res.json();
-        setSubscription(data);
-        setSuccess("Plán byl úspěšně aktivován.");
+        setError(data.error ?? "Chyba při vytváření platby.");
+        setRedirecting(null);
+        return;
       }
+      const { url } = await res.json();
+      window.location.href = url;
     } catch {
-      setError("Nepodařilo se změnit plán.");
-    } finally {
-      setUpgrading(null);
+      setError("Nepodařilo se spustit platbu.");
+      setRedirecting(null);
     }
   };
 
@@ -99,6 +101,17 @@ export default function SubscriptionPage() {
         <h1 className="text-2xl font-bold text-foreground">Předplatné</h1>
         <p className="text-muted-foreground mt-1">Vyberte plán, který vyhovuje vašim potřebám.</p>
       </div>
+
+      {successParam && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+          Platba proběhla úspěšně. Váš plán bude aktivován během pár sekund.
+        </div>
+      )}
+      {cancelledParam && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+          Platba byla zrušena. Můžete to zkusit znovu kdykoliv.
+        </div>
+      )}
 
       {/* Stav kreditů */}
       {subscription && (
@@ -128,11 +141,6 @@ export default function SubscriptionPage() {
       {error && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
-        </div>
-      )}
-      {success && (
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
-          {success}
         </div>
       )}
 
@@ -182,13 +190,13 @@ export default function SubscriptionPage() {
                   <Button
                     className="w-full"
                     variant={isCurrent ? "outline" : "default"}
-                    disabled={isCurrent || upgrading !== null}
+                    disabled={isCurrent || redirecting !== null}
                     onClick={() => handleSelect(plan.id)}
                   >
-                    {upgrading === plan.id ? (
+                    {redirecting === plan.id ? (
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : null}
-                    {isCurrent ? "Aktuální plán" : "Zvolit plán"}
+                    {isCurrent ? "Aktuální plán" : "Předplatit"}
                   </Button>
                 </div>
               </CardContent>
@@ -198,7 +206,8 @@ export default function SubscriptionPage() {
       </div>
 
       <p className="text-xs text-muted-foreground text-center">
-        Kredity se automaticky obnovují každý měsíc. SMS = 1 kredit, VAPI hovor = 5 kreditů.
+        Platba probíhá bezpečně přes Stripe. Kredity se automaticky obnovují každý měsíc.
+        SMS = 1 kredit, VAPI hovor = 5 kreditů.
       </p>
     </div>
   );
