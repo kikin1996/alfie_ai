@@ -1,6 +1,6 @@
-# Real Estate Viewing Automator
+# Alfie
 
-Aplikace pro makléře: účty, registrace, automatizace prohlídek přes SMS a Google Kalendář. PropTech vzhled (námořnická modrá, bílá, smaragdová zelená).
+Aplikace pro makléře: automatizace prohlídek přes SMS a VAPI hovory, Google Kalendář, kreditový systém s předplatným přes Stripe.
 
 ## Stack
 
