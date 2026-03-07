@@ -61,17 +61,16 @@ export default function Navbar() {
 
           <Link
             href="/subscription"
-            className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition-colors ${
-              pathname === "/subscription"
-                ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
+            className="flex items-center gap-2 rounded-lg border border-border bg-muted/60 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
           >
-            <Coins className="h-4 w-4" />
+            <Coins className="h-4 w-4 text-primary" />
             {credits !== null ? (
-              <span>{credits} kr.</span>
+              <>
+                <span className="font-bold text-foreground">{credits}</span>
+                <span className="text-muted-foreground text-xs">kreditů</span>
+              </>
             ) : (
-              "Předplatné"
+              <span className="text-muted-foreground">Předplatné</span>
             )}
           </Link>
 
