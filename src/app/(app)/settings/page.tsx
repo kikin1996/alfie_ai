@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -46,7 +46,7 @@ type FormValues = z.infer<typeof schema>;
 const defaultTemplate =
   "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";
 
-export default function SettingsPage() {
+function SettingsPageInner() {
   const { user, loading: authLoading } = useAuth();
   const searchParams = useSearchParams();
   const calendarStatus = searchParams?.get("calendar") ?? null;
@@ -413,5 +413,13 @@ export default function SettingsPage() {
         </Button>
       </form>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsPageInner />
+    </Suspense>
   );
 }

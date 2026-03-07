@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Card,
@@ -34,7 +34,7 @@ function PlanDiscount(plan: SubscriptionPlan): number | null {
   return saving > 0 ? saving : null;
 }
 
-export default function SubscriptionPage() {
+function SubscriptionPageInner() {
   const searchParams = useSearchParams();
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
@@ -300,5 +300,13 @@ export default function SubscriptionPage() {
         SMS = 1 kredit, VAPI hovor = 5 kreditů.
       </p>
     </div>
+  );
+}
+
+export default function SubscriptionPage() {
+  return (
+    <Suspense>
+      <SubscriptionPageInner />
+    </Suspense>
   );
 }
