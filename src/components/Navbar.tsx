@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, Settings, LayoutDashboard, LogOut, ShieldCheck, Coins } from "lucide-react";
+import { CalendarDays, Settings, LayoutDashboard, LogOut, ShieldCheck, Coins, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Předplatné", icon: CreditCard, path: "/subscription" },
   { label: "Nastavení", icon: Settings, path: "/settings" },
 ];
 
@@ -43,6 +44,9 @@ export default function Navbar() {
         <nav className="flex items-center gap-1">
           {navItems.map((item) => {
             const isActive = pathname === item.path;
+            const isSubscription = item.path === "/subscription";
+            const lowCredits = credits !== null && credits < 5;
+            const medCredits = credits !== null && credits >= 5 && credits < 15;
             return (
               <Link
                 key={item.path}
@@ -55,34 +59,23 @@ export default function Navbar() {
               >
                 <item.icon className="h-4 w-4" />
                 {item.label}
+                {isSubscription && credits !== null && (
+                  <span className={`ml-0.5 rounded-full px-1.5 py-0.5 text-[11px] font-bold leading-none ${
+                    lowCredits
+                      ? "bg-destructive text-destructive-foreground"
+                      : medCredits
+                      ? "bg-amber-500 text-white"
+                      : isActive
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "bg-muted text-foreground"
+                  }`}>
+                    <Coins className="inline h-3 w-3 mr-0.5 -mt-0.5" />
+                    {credits}
+                  </span>
+                )}
               </Link>
             );
           })}
-
-          <Link
-            href="/subscription"
-            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted ${
-              credits !== null && credits < 5
-                ? "border-destructive/50 bg-destructive/10"
-                : credits !== null && credits < 15
-                ? "border-amber-400/50 bg-amber-500/10"
-                : "border-border bg-muted/60"
-            }`}
-          >
-            <Coins className={`h-4 w-4 ${
-              credits !== null && credits < 5 ? "text-destructive" :
-              credits !== null && credits < 15 ? "text-amber-600" :
-              "text-primary"
-            }`} />
-            <span className={`font-bold ${
-              credits !== null && credits < 5 ? "text-destructive" :
-              credits !== null && credits < 15 ? "text-amber-700" :
-              "text-foreground"
-            }`}>
-              {credits ?? 0}
-            </span>
-            <span className="text-muted-foreground text-xs">kr.</span>
-          </Link>
 
           {isAdmin && (
             <Link
