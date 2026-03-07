@@ -61,17 +61,27 @@ export default function Navbar() {
 
           <Link
             href="/subscription"
-            className="flex items-center gap-2 rounded-lg border border-border bg-muted/60 px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+            className={`flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted ${
+              credits !== null && credits < 5
+                ? "border-destructive/50 bg-destructive/10"
+                : credits !== null && credits < 15
+                ? "border-amber-400/50 bg-amber-500/10"
+                : "border-border bg-muted/60"
+            }`}
           >
-            <Coins className="h-4 w-4 text-primary" />
-            {credits !== null ? (
-              <>
-                <span className="font-bold text-foreground">{credits}</span>
-                <span className="text-muted-foreground text-xs">kreditů</span>
-              </>
-            ) : (
-              <span className="text-muted-foreground">Předplatné</span>
-            )}
+            <Coins className={`h-4 w-4 ${
+              credits !== null && credits < 5 ? "text-destructive" :
+              credits !== null && credits < 15 ? "text-amber-600" :
+              "text-primary"
+            }`} />
+            <span className={`font-bold ${
+              credits !== null && credits < 5 ? "text-destructive" :
+              credits !== null && credits < 15 ? "text-amber-700" :
+              "text-foreground"
+            }`}>
+              {credits ?? 0}
+            </span>
+            <span className="text-muted-foreground text-xs">kr.</span>
           </Link>
 
           {isAdmin && (
