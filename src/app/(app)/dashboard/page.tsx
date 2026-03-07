@@ -642,14 +642,28 @@ export default function DashboardPage() {
         </div>
       )}
       {hasSubscription === true && credits !== null && credits > 0 && credits < 5 && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-destructive bg-destructive/10 px-5 py-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+          <div>
+            <p className="font-semibold text-destructive">
+              Kriticky málo kreditů — zbývá {credits} {credits === 1 ? "kredit" : "kredity"}
+            </p>
+            <p className="text-sm text-destructive/80 mt-0.5">
+              VAPI hovory (5 kreditů) nebudou uskutečněny. SMS ještě fungují.{" "}
+              <a href="/subscription" className="underline font-medium">Dobít kredity →</a>
+            </p>
+          </div>
+        </div>
+      )}
+      {hasSubscription === true && credits !== null && credits >= 5 && credits < 15 && (
         <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-amber-500 bg-amber-500/10 px-5 py-4">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
           <div>
             <p className="font-semibold text-amber-700 dark:text-amber-400">
-              Málo kreditů — zbývá {credits} {credits === 1 ? "kredit" : credits < 5 ? "kredity" : "kreditů"}
+              Kredity se blíží k vyčerpání — zbývá {credits} kreditů
             </p>
             <p className="text-sm text-amber-700/80 dark:text-amber-400/80 mt-0.5">
-              VAPI hovory vyžadují 5 kreditů a nebudou uskutečněny. SMS ({credits}× zbývá) ještě fungují.{" "}
+              Brzy nebudete moci odesílat SMS ani uskutečňovat hovory.{" "}
               <a href="/subscription" className="underline font-medium">Dobít kredity →</a>
             </p>
           </div>
