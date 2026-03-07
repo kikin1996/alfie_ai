@@ -35,7 +35,7 @@ export default async function HomePage() {
               <CalendarDays className="h-5 w-5 text-white" />
             </div>
             <span className="font-display text-lg font-bold text-navy">
-              ViewingBot
+              Alfie
             </span>
           </div>
           <nav className="flex items-center gap-2">
@@ -71,7 +71,7 @@ export default async function HomePage() {
             <span className="text-emerald-400">připomenout prohlídku</span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-white/70">
-            ViewingBot propojí váš Google Kalendář s SMS notifikacemi a AI hovory.
+            Alfie propojí váš Google Kalendář s SMS notifikacemi a AI hovory.
             Klienti dostanou automatické připomínky – vy se soustředíte na prodej.
           </p>
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
@@ -97,7 +97,7 @@ export default async function HomePage() {
         <div className="container">
           <div className="mb-12 text-center">
             <h2 className="font-display text-3xl font-bold text-navy">
-              Jak ViewingBot funguje?
+              Jak Alfie funguje?
             </h2>
             <p className="mt-3 text-muted-foreground">
               Tři kroky a prohlídky se řídí samy.
@@ -110,7 +110,7 @@ export default async function HomePage() {
                 step: "1",
                 icon: CalendarDays,
                 title: "Propojte Google Kalendář",
-                desc: "Přidejte do události klíčové slovo (např. #prohlidka) a zadejte tel. číslo a adresu klienta. ViewingBot si vše automaticky načte.",
+                desc: "Přidejte do události klíčové slovo (např. #prohlidka) a zadejte tel. číslo a adresu klienta. Alfie si vše automaticky načte.",
                 color: "bg-navy",
               },
               {
@@ -243,9 +243,9 @@ export default async function HomePage() {
         <div className="container flex flex-col items-center justify-between gap-2 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4 text-navy" />
-            <span className="font-display font-semibold text-navy">ViewingBot</span>
+            <span className="font-display font-semibold text-navy">Alfie</span>
           </div>
-          <p>© {new Date().getFullYear()} ViewingBot. Všechna práva vyhrazena.</p>
+          <p>© {new Date().getFullYear()} Alfie. Všechna práva vyhrazena.</p>
           <div className="flex gap-4">
             <Link href="/login" className="hover:text-foreground transition-colors">Přihlásit se</Link>
             <Link href="/register" className="hover:text-foreground transition-colors">Registrovat se</Link>

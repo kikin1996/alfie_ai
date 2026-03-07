@@ -166,7 +166,7 @@ export default function SubscriptionPage() {
                 ) : (
                   <ExternalLink className="h-4 w-4 mr-2" />
                 )}
-                Spravovat předplatné
+                Zrušit / upravit
               </Button>
             </div>
           </CardContent>
@@ -221,18 +221,39 @@ export default function SubscriptionPage() {
                     </li>
                   ))}
                 </ul>
-                <div className="mt-auto pt-2">
-                  <Button
-                    className="w-full"
-                    variant={isCurrent ? "outline" : "default"}
-                    disabled={isCurrent || redirecting !== null}
-                    onClick={() => handleSelect(plan.id)}
-                  >
-                    {redirecting === plan.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                    ) : null}
-                    {isCurrent ? "Aktuální plán" : "Předplatit"}
-                  </Button>
+                <div className="mt-auto pt-2 flex flex-col gap-2">
+                  {isCurrent ? (
+                    <Button className="w-full" variant="outline" disabled>
+                      Aktuální plán
+                    </Button>
+                  ) : subscription ? (
+                    /* Uživatel má sub → změna přes portal */
+                    <Button
+                      className="w-full"
+                      variant="default"
+                      disabled={portalLoading}
+                      onClick={handlePortal}
+                    >
+                      {portalLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                      )}
+                      Přejít na {plan.name}
+                    </Button>
+                  ) : (
+                    /* Nový zákazník → Stripe Checkout */
+                    <Button
+                      className="w-full"
+                      disabled={redirecting !== null}
+                      onClick={() => handleSelect(plan.id)}
+                    >
+                      {redirecting === plan.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Předplatit
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

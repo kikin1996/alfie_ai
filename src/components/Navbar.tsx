@@ -36,7 +36,7 @@ export default function Navbar() {
             <CalendarDays className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="font-display text-lg font-bold text-foreground">
-            ViewingBot
+            Alfie
           </span>
         </Link>
 
