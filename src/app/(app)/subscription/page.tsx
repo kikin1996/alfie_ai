@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, CreditCard, Zap, Building2 } from "lucide-react";
+import { Loader2, CheckCircle2, CreditCard, Zap, Building2, ExternalLink } from "lucide-react";
 import type { SubscriptionPlan, UserSubscription } from "@/types";
 
 function PlanIcon({ planId }: { planId: string }) {
@@ -31,6 +31,7 @@ export default function SubscriptionPage() {
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [redirecting, setRedirecting] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const successParam = searchParams?.get("success");
@@ -78,6 +79,25 @@ export default function SubscriptionPage() {
     } catch {
       setError("Nepodařilo se spustit platbu.");
       setRedirecting(null);
+    }
+  };
+
+  const handlePortal = async () => {
+    setPortalLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error ?? "Nepodařilo se otevřít správu předplatného.");
+        return;
+      }
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch {
+      setError("Nepodařilo se otevřít správu předplatného.");
+    } finally {
+      setPortalLoading(false);
     }
   };
 
@@ -134,6 +154,21 @@ export default function SubscriptionPage() {
                 <p className="font-semibold">{periodEnd}</p>
               </div>
             )}
+            <div className="ml-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePortal}
+                disabled={portalLoading}
+              >
+                {portalLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                )}
+                Spravovat předplatné
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
