@@ -9,5 +9,14 @@ export async function GET() {
     .order("sort_order");
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+
+  const mapped = (data ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    priceCzk: p.price_czk,
+    creditsPerMonth: p.credits_per_month,
+    description: p.description,
+    sortOrder: p.sort_order,
+  }));
+  return NextResponse.json(mapped);
 }
