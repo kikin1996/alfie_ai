@@ -24,7 +24,7 @@ export default function Navbar() {
     if (!user) return;
     fetch("/api/subscription")
       .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setCredits(data.credits_remaining ?? null); })
+      .then((data) => { if (data) setCredits(data.creditsRemaining ?? null); })
       .catch(() => {});
   }, [user]);
 

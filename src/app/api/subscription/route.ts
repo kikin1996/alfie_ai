@@ -20,7 +20,28 @@ export async function GET() {
     .eq("user_id", session.user.id)
     .maybeSingle();
 
-  return NextResponse.json(data ?? null);
+  if (!data) return NextResponse.json(null);
+
+  const mapped = {
+    id: data.id,
+    userId: data.user_id,
+    planId: data.plan_id,
+    creditsRemaining: data.credits_remaining,
+    periodStart: data.period_start,
+    periodEnd: data.period_end,
+    status: data.status,
+    createdAt: data.created_at,
+    updatedAt: data.updated_at,
+    plan: data.plan ? {
+      id: data.plan.id,
+      name: data.plan.name,
+      priceCzk: data.plan.price_czk,
+      creditsPerMonth: data.plan.credits_per_month,
+      description: data.plan.description,
+      sortOrder: data.plan.sort_order,
+    } : undefined,
+  };
+  return NextResponse.json(mapped);
 }
 
 /**

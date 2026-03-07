@@ -514,7 +514,7 @@ export default function DashboardPage() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data) {
-          setCredits(data.credits_remaining ?? 0);
+          setCredits(data.creditsRemaining ?? 0);
           setHasSubscription(data.status === "active");
         } else {
           setHasSubscription(false);
