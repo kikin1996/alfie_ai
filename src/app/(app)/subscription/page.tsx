@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -20,10 +19,20 @@ function PlanIcon({ planId }: { planId: string }) {
 }
 
 const PLAN_FEATURES: Record<string, string[]> = {
-  starter: ["30 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Emailová podpora"],
-  pro: ["50 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Prioritní podpora"],
-  business: ["100 kreditů / měsíc", "SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Dedikovaná podpora"],
+  starter: ["SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Emailová podpora"],
+  pro: ["SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Prioritní podpora"],
+  business: ["SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Dedikovaná podpora"],
 };
+
+// Starter je základ pro výpočet slevy: 99 Kč / 30 kreditů
+const BASE_PRICE_PER_CREDIT = 99 / 30;
+
+function PlanDiscount(plan: SubscriptionPlan): number | null {
+  if (!plan.creditsPerMonth || !plan.priceCzk) return null;
+  const pricePerCredit = plan.priceCzk / plan.creditsPerMonth;
+  const saving = Math.round((1 - pricePerCredit / BASE_PRICE_PER_CREDIT) * 100);
+  return saving > 0 ? saving : null;
+}
 
 export default function SubscriptionPage() {
   const searchParams = useSearchParams();
@@ -184,11 +193,17 @@ export default function SubscriptionPage() {
         {plans.map((plan) => {
           const isCurrent = plan.id === currentPlanId;
           const features = PLAN_FEATURES[plan.id] ?? [];
+          const discount = PlanDiscount(plan);
+          const pricePerCredit = plan.creditsPerMonth
+            ? (plan.priceCzk / plan.creditsPerMonth).toFixed(2).replace(".", ",")
+            : null;
+
           return (
             <Card
               key={plan.id}
               className={`relative flex flex-col ${isCurrent ? "border-primary ring-1 ring-primary" : ""}`}
             >
+              {/* Aktivní badge */}
               {isCurrent && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="rounded-full bg-primary px-3 py-0.5 text-xs font-medium text-primary-foreground">
@@ -196,22 +211,43 @@ export default function SubscriptionPage() {
                   </span>
                 </div>
               )}
-              <CardHeader>
+              {/* Sleva badge (pouze ne-Starter plány) */}
+              {!isCurrent && discount && (
+                <div className="absolute -top-3 right-4">
+                  <span className="rounded-full bg-emerald-500 px-3 py-0.5 text-xs font-medium text-white">
+                    Ušetříte {discount} %
+                  </span>
+                </div>
+              )}
+
+              <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-foreground">
                     <PlanIcon planId={plan.id} />
                   </div>
                   <div>
                     <CardTitle className="text-lg">{plan.name}</CardTitle>
-                    <CardDescription className="text-base font-semibold text-foreground">
-                      {plan.priceCzk} Kč / měsíc
-                    </CardDescription>
                   </div>
                 </div>
-                {plan.description && (
-                  <p className="text-sm text-muted-foreground mt-2">{plan.description}</p>
-                )}
+
+                {/* Cena */}
+                <div className="mt-4">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-foreground">{plan.priceCzk}</span>
+                    <span className="text-lg font-semibold text-foreground">Kč</span>
+                    <span className="text-sm text-muted-foreground">/ měsíc</span>
+                  </div>
+                  {plan.creditsPerMonth && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      <span className="font-semibold text-foreground">{plan.creditsPerMonth} kreditů</span>
+                      {pricePerCredit && (
+                        <span> · {pricePerCredit} Kč / kredit</span>
+                      )}
+                    </p>
+                  )}
+                </div>
               </CardHeader>
+
               <CardContent className="flex flex-col flex-1 gap-4">
                 <ul className="space-y-2">
                   {features.map((f) => (
@@ -227,7 +263,6 @@ export default function SubscriptionPage() {
                       Aktuální plán
                     </Button>
                   ) : subscription ? (
-                    /* Uživatel má sub → změna přes portal */
                     <Button
                       className="w-full"
                       variant="default"
@@ -242,7 +277,6 @@ export default function SubscriptionPage() {
                       Přejít na {plan.name}
                     </Button>
                   ) : (
-                    /* Nový zákazník → Stripe Checkout */
                     <Button
                       className="w-full"
                       disabled={redirecting !== null}
