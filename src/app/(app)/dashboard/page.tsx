@@ -25,6 +25,7 @@ import {
   MessageSquare,
   Phone,
   CheckCircle,
+  AlertTriangle,
 } from "lucide-react";
 
 const statusLabels: Record<ViewingStatus, string> = {
@@ -460,6 +461,8 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const [credits, setCredits] = useState<number | null>(null);
+  const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
   const supabase = createClient();
 
   const fetchViewings = useCallback(async () => {
@@ -504,6 +507,21 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchViewings();
   }, [fetchViewings]);
+
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/subscription")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data) {
+          setCredits(data.credits_remaining ?? 0);
+          setHasSubscription(data.status === "active");
+        } else {
+          setHasSubscription(false);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
 
   const syncCalendar = async () => {
     setSyncing(true);
@@ -599,6 +617,44 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Upozornění na nedostatek kreditů */}
+      {hasSubscription === false && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-destructive bg-destructive/10 px-5 py-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+          <div>
+            <p className="font-semibold text-destructive">Nemáte aktivní předplatné</p>
+            <p className="text-sm text-destructive/80 mt-0.5">
+              SMS ani VAPI hovory nebudou odesílány. <a href="/subscription" className="underline font-medium">Vyberte plán →</a>
+            </p>
+          </div>
+        </div>
+      )}
+      {hasSubscription === true && credits !== null && credits === 0 && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-destructive bg-destructive/10 px-5 py-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+          <div>
+            <p className="font-semibold text-destructive">Nemáte žádné kredity</p>
+            <p className="text-sm text-destructive/80 mt-0.5">
+              Žádné SMS ani hovory nebudou odeslány. <a href="/subscription" className="underline font-medium">Dobít kredity →</a>
+            </p>
+          </div>
+        </div>
+      )}
+      {hasSubscription === true && credits !== null && credits > 0 && credits < 5 && (
+        <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-amber-500 bg-amber-500/10 px-5 py-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+          <div>
+            <p className="font-semibold text-amber-700 dark:text-amber-400">
+              Málo kreditů — zbývá {credits} {credits === 1 ? "kredit" : credits < 5 ? "kredity" : "kreditů"}
+            </p>
+            <p className="text-sm text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+              VAPI hovory vyžadují 5 kreditů a nebudou uskutečněny. SMS ({credits}× zbývá) ještě fungují.{" "}
+              <a href="/subscription" className="underline font-medium">Dobít kredity →</a>
+            </p>
+          </div>
+        </div>
+      )}
 
       {viewings.length === 0 ? (
         <Card>
