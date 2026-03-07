@@ -96,6 +96,32 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // customer.subscription.updated – změna plánu přes Customer Portal
+  if (event.type === "customer.subscription.updated") {
+    const stripeSub = event.data.object as Stripe.Subscription;
+    const newPriceId = stripeSub.items.data[0]?.price.id;
+    if (newPriceId) {
+      // Najít plán podle stripe_price_id
+      const { data: plan } = await supabaseAdmin
+        .from("subscription_plans")
+        .select("id, credits_per_month")
+        .eq("stripe_price_id", newPriceId)
+        .maybeSingle();
+
+      if (plan) {
+        await supabaseAdmin
+          .from("user_subscriptions")
+          .update({
+            plan_id: plan.id,
+            credits_remaining: plan.credits_per_month,
+            status: "active",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("stripe_subscription_id", stripeSub.id);
+      }
+    }
+  }
+
   // customer.subscription.deleted – zrušení předplatného
   if (event.type === "customer.subscription.deleted") {
     const stripeSub = event.data.object as Stripe.Subscription;
