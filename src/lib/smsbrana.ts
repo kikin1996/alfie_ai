@@ -25,6 +25,7 @@ export async function sendSms(
 
   const text = await res.text();
   const trimmed = text.trim();
+  console.log("[smsbrana] response:", trimmed);
   // SMSbrána vrací "err=0" nebo prázdný string při úspěchu
   return trimmed === "" || trimmed === "OK" || trimmed.startsWith("err=0");
 }
