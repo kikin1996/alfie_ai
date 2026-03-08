@@ -106,27 +106,32 @@ export function parseCalendarEvent(
   let address = adresaMatch ? adresaMatch[1].trim() : (location || "").trim()
 
   // Fallback: title like "Jiří Novák, Adresa, 123 456 789, #prohlidka"
-  if (!clientPhone || !address) {
-    const keyword = triggerKeyword.trim().toLowerCase()
-    const parts = (summary || "")
-      .split(",")
-      .map((p) => p.trim())
-      .filter(Boolean)
-      .filter((p) => (keyword ? !p.toLowerCase().includes(keyword) : true))
+  const keyword = triggerKeyword.trim().toLowerCase()
+  const summaryParts = (summary || "")
+    .split(",")
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .filter((p) => (keyword ? !p.toLowerCase().includes(keyword) : true))
 
-    if (!clientPhone) {
-      const phonePart =
-        parts.find((p) => p.replace(/\D/g, "").length >= 9) || ""
-      if (phonePart) clientPhone = normalizePhone(phonePart)
-    }
+  if (!clientPhone || !address) {
+    // Phone = part with 9+ digits
+    const phonePart = summaryParts.find((p) => p.replace(/\D/g, "").length >= 9) || ""
+    if (!clientPhone && phonePart) clientPhone = normalizePhone(phonePart)
 
     if (!address) {
-      const addressPart = parts.find((p) => p !== clientPhone) || ""
-      if (addressPart) address = addressPart
+      // Name = first part that doesn't look like a phone (< 6 digits)
+      const nonPhoneParts = summaryParts.filter((p) => p !== phonePart)
+      const namePart = nonPhoneParts.find((p) => p.replace(/\D/g, "").length < 6) || ""
+      // Address = parts that are neither name nor phone
+      const addressParts = nonPhoneParts.filter((p) => p !== namePart)
+      if (addressParts.length > 0) address = addressParts.join(", ")
     }
   }
 
-  const clientName = (summary || "").trim() || "Klient"
+  // Client name = first non-phone part of summary (not the full summary string)
+  const namePhonePart = summaryParts.find((p) => p.replace(/\D/g, "").length >= 9) || ""
+  const nameCandidate = summaryParts.filter((p) => p !== namePhonePart).find((p) => p.replace(/\D/g, "").length < 6)
+  const clientName = nameCandidate || (summary || "").trim() || "Klient"
 
   if (!address && !clientPhone) return null
 

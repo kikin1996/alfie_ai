@@ -231,7 +231,7 @@ function AddNotifPanel({ onAdd, onClose }: AddNotifPanelProps) {
 // ViewingCard – stateful karta prohlídky
 // ---------------------------------------------------------------------------
 
-function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin: boolean }) {
+function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; isAdmin: boolean; isPast?: boolean }) {
   const [viewing, setViewing] = useState<Viewing>(initial);
   const [addingNotif, setAddingNotif] = useState(false);
   const [triggerState, setTriggerState] = useState<Record<string, "idle" | "busy" | "ok" | "err">>({});
@@ -345,18 +345,18 @@ function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin:
           <div className="flex-1 min-w-0">
             {editing ? (
               <Input
-                value={editFields.address}
-                onChange={(e) => setEditFields((f) => ({ ...f, address: e.target.value }))}
+                value={editFields.clientName}
+                onChange={(e) => setEditFields((f) => ({ ...f, clientName: e.target.value }))}
                 className="h-7 text-sm font-semibold"
-                placeholder="Místo / adresa"
+                placeholder="Jméno klienta"
               />
             ) : (
-              <CardTitle className="text-base">Místo: {viewing.address}</CardTitle>
+              <CardTitle className="text-base">Klient: {viewing.clientName || "—"}</CardTitle>
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <Badge variant={statusVariant[viewing.status]}>
-              {statusLabels[viewing.status]}
+              {isPast && viewing.status === "pending" ? "Minulá" : statusLabels[viewing.status]}
             </Badge>
             {editing ? (
               <button
@@ -381,18 +381,14 @@ function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin:
           </div>
         </div>
       </CardHeader>
-      <CardContent className="text-sm text-muted-foreground space-y-2">
-        <p>
-          <span className="font-medium text-foreground">Čas:</span>{" "}
-          {format(start, "d. M. yyyy, HH:mm", { locale: cs })}
-        </p>
+      <CardContent className="text-sm text-muted-foreground space-y-1.5">
         {editing ? (
           <div className="flex flex-col gap-1.5">
             <Input
-              value={editFields.clientName}
-              onChange={(e) => setEditFields((f) => ({ ...f, clientName: e.target.value }))}
+              value={editFields.address}
+              onChange={(e) => setEditFields((f) => ({ ...f, address: e.target.value }))}
               className="h-7 text-sm"
-              placeholder="Jméno klienta"
+              placeholder="Adresa"
             />
             <Input
               value={editFields.clientPhone}
@@ -403,8 +399,10 @@ function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin:
           </div>
         ) : (
           <>
-            {viewing.clientName && <p>Klient: {viewing.clientName}</p>}
-            {viewing.clientPhone && <p>Tel: {viewing.clientPhone}</p>}
+            <p><span className="font-medium text-foreground">Adresa:</span> {viewing.address || "—"}</p>
+            <p><span className="font-medium text-foreground">Datum:</span> {format(start, "d. M. yyyy", { locale: cs })}</p>
+            <p><span className="font-medium text-foreground">Čas:</span> {format(start, "HH:mm", { locale: cs })}</p>
+            {viewing.clientPhone && <p><span className="font-medium text-foreground">Tel.:</span> {viewing.clientPhone}</p>}
           </>
         )}
 
@@ -553,10 +551,13 @@ export default function DashboardPage() {
       setLoading(false);
       return;
     }
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
     const { data } = await supabase
       .from("viewings")
       .select("*")
       .eq("user_id", user.id)
+      .gte("event_start", startOfToday.toISOString())
       .order("event_start", { ascending: true });
     const rows = (data as Record<string, unknown>[]) ?? [];
     setViewings(
@@ -769,18 +770,6 @@ export default function DashboardPage() {
               <h2 className="text-lg font-medium text-navy mb-3">Nadcházející</h2>
               <div className="grid gap-3">
                 {upcoming.map((v) => (
-                  <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} />
-                ))}
-              </div>
-            </section>
-          )}
-          {past.length > 0 && (
-            <section>
-              <h2 className="text-lg font-medium text-muted-foreground mb-3">
-                Minulé / zrušené
-              </h2>
-              <div className="grid gap-3">
-                {past.map((v) => (
                   <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} />
                 ))}
               </div>
