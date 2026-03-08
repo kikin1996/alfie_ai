@@ -26,6 +26,8 @@ import {
   Phone,
   CheckCircle,
   AlertTriangle,
+  Pencil,
+  Save,
 } from "lucide-react";
 
 const statusLabels: Record<ViewingStatus, string> = {
@@ -234,6 +236,26 @@ function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin:
   const [addingNotif, setAddingNotif] = useState(false);
   const [triggerState, setTriggerState] = useState<Record<string, "idle" | "busy" | "ok" | "err">>({});
   const [triggerError, setTriggerError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [editFields, setEditFields] = useState({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone });
+  const [saving, setSaving] = useState(false);
+
+  const saveEdit = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/viewings/${viewing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFields),
+      });
+      if (res.ok) {
+        setViewing((v) => ({ ...v, ...editFields }));
+        setEditing(false);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const trigger = async (action: "sms" | "vapi") => {
     setTriggerState((s) => ({ ...s, [action]: "busy" }));
@@ -320,12 +342,43 @@ function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin:
     <Card className="border-navy/10">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle className="text-base">Místo: {viewing.address}</CardTitle>
+          <div className="flex-1 min-w-0">
+            {editing ? (
+              <Input
+                value={editFields.address}
+                onChange={(e) => setEditFields((f) => ({ ...f, address: e.target.value }))}
+                className="h-7 text-sm font-semibold"
+                placeholder="Místo / adresa"
+              />
+            ) : (
+              <CardTitle className="text-base">Místo: {viewing.address}</CardTitle>
+            )}
           </div>
-          <Badge variant={statusVariant[viewing.status]}>
-            {statusLabels[viewing.status]}
-          </Badge>
+          <div className="flex items-center gap-1 shrink-0">
+            <Badge variant={statusVariant[viewing.status]}>
+              {statusLabels[viewing.status]}
+            </Badge>
+            {editing ? (
+              <button
+                type="button"
+                onClick={saveEdit}
+                disabled={saving}
+                className="p-1 rounded text-emerald-600 hover:bg-emerald-50 transition-colors"
+                title="Uložit"
+              >
+                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => { setEditFields({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone }); setEditing(true); }}
+                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Upravit"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground space-y-2">
@@ -333,8 +386,27 @@ function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin:
           <span className="font-medium text-foreground">Čas:</span>{" "}
           {format(start, "d. M. yyyy, HH:mm", { locale: cs })}
         </p>
-        {viewing.clientName && <p>Klient: {viewing.clientName}</p>}
-        {viewing.clientPhone && <p>Tel: {viewing.clientPhone}</p>}
+        {editing ? (
+          <div className="flex flex-col gap-1.5">
+            <Input
+              value={editFields.clientName}
+              onChange={(e) => setEditFields((f) => ({ ...f, clientName: e.target.value }))}
+              className="h-7 text-sm"
+              placeholder="Jméno klienta"
+            />
+            <Input
+              value={editFields.clientPhone}
+              onChange={(e) => setEditFields((f) => ({ ...f, clientPhone: e.target.value }))}
+              className="h-7 text-sm"
+              placeholder="Telefon klienta"
+            />
+          </div>
+        ) : (
+          <>
+            {viewing.clientName && <p>Klient: {viewing.clientName}</p>}
+            {viewing.clientPhone && <p>Tel: {viewing.clientPhone}</p>}
+          </>
+        )}
 
         {/* Notifikace */}
         <div className="pt-1">

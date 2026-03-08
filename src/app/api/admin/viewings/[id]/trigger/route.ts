@@ -100,7 +100,7 @@ export async function POST(
       brokerName: userSettings?.broker_name ?? "",
       brokerPhone: userSettings?.broker_phone ?? "",
       agencyName: userSettings?.agency_name ?? "",
-      minutesBefore: appConfig.vapi_minutes_before ?? 30,
+      minutesBefore: appConfig?.vapi_minutes_before ?? 30,
     }).catch(() => null);
     if (!callId) return NextResponse.json({ error: "Hovor se nepodařilo spustit" }, { status: 500 });
     return NextResponse.json({ ok: true, message: `Hovor zahájen (${callId})` });
