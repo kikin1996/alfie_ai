@@ -12,6 +12,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { isSupabaseConfigured } from "@/lib/supabase";
 import { Calendar, AlertCircle } from "lucide-react";
+// AlertCircle used only in dev
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,7 +27,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md border-navy/20 shadow-lg">
-        {!configured && (
+        {!configured && process.env.NODE_ENV === "development" && (
           <div className="mx-4 mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 flex gap-2">
             <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
             <span>
