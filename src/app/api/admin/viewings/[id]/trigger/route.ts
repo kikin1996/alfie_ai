@@ -77,9 +77,10 @@ export async function POST(
     const template = userSettings?.sms_template ??
       "Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.";
     const body = fillTemplate(template, viewing.address, timeStr, name, userSettings?.broker_name ?? "", userSettings?.broker_phone ?? "");
-    const sent = await sendSms(smsLogin, smsPassword, viewing.client_phone, body).catch(() => false);
+    const testNumber = userSettings?.broker_phone || viewing.client_phone;
+    const sent = await sendSms(smsLogin, smsPassword, testNumber, body).catch(() => false);
     if (!sent) return NextResponse.json({ error: "SMS se nepodařilo odeslat" }, { status: 500 });
-    return NextResponse.json({ ok: true, message: `SMS odeslána na ${viewing.client_phone}` });
+    return NextResponse.json({ ok: true, message: `SMS odeslána na ${testNumber}` });
   }
 
   if (action === "vapi") {
