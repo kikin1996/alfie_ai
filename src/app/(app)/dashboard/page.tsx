@@ -56,14 +56,15 @@ interface NotifFlagProps {
   enabled: boolean;
   label: string;
   onToggle: () => Promise<void>;
+  disabled?: boolean;
 }
 
-function NotifFlag({ sent, enabled, label, onToggle }: NotifFlagProps) {
+function NotifFlag({ sent, enabled, label, onToggle, disabled }: NotifFlagProps) {
   const [localEnabled, setLocalEnabled] = useState(enabled);
   const [busy, setBusy] = useState(false);
 
   const handleClick = async () => {
-    if (sent || busy) return;
+    if (sent || busy || disabled) return;
     setBusy(true);
     const next = !localEnabled;
     setLocalEnabled(next);
@@ -78,6 +79,8 @@ function NotifFlag({ sent, enabled, label, onToggle }: NotifFlagProps) {
 
   const stateClasses = sent
     ? "bg-emerald-bg text-emerald border-emerald/20 cursor-default"
+    : disabled
+    ? "bg-muted/40 text-muted-foreground/40 border-border/40 cursor-default opacity-50"
     : localEnabled
     ? "bg-muted text-muted-foreground border-border cursor-pointer hover:border-muted-foreground/40 hover:bg-muted/80"
     : "bg-red-50 text-red-500 border-red-200 cursor-pointer hover:bg-red-100";
@@ -432,6 +435,12 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
             <p><span className="font-medium text-foreground">Datum:</span> {format(start, "d. M. yyyy", { locale: cs })}</p>
             <p><span className="font-medium text-foreground">Čas:</span> {format(start, "HH:mm", { locale: cs })}</p>
             {viewing.clientPhone && <p><span className="font-medium text-foreground">Tel.:</span> {viewing.clientPhone}</p>}
+            {viewing.status === "confirmed" && (
+              <p className="text-emerald-600 font-medium">
+                ✓ Potvrzeno po{" "}
+                {viewing.vapiCalled ? "hovoru 30min" : viewing.sms1hSent ? "SMS 1h" : viewing.sms2hSent ? "SMS 2h" : "SMS"}
+              </p>
+            )}
           </>
         )}
 
@@ -453,25 +462,31 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
         )}
 
         {/* Notifikace */}
+        {(() => {
+          const isDone = viewing.status === "confirmed" || viewing.status === "cancelled";
+          return (
         <div className="pt-1">
           <div className="flex flex-wrap items-center gap-1">
             <NotifFlag
               sent={viewing.sms2hSent}
-              enabled={viewing.sms2hEnabled}
+              enabled={isDone ? false : viewing.sms2hEnabled}
               label="SMS 2h"
               onToggle={() => toggleBuiltIn("sms2h_enabled", "sms2hEnabled")}
+              disabled={isDone}
             />
             <NotifFlag
               sent={viewing.sms1hSent}
-              enabled={viewing.sms1hEnabled}
+              enabled={isDone ? false : viewing.sms1hEnabled}
               label="SMS 1h"
               onToggle={() => toggleBuiltIn("sms1h_enabled", "sms1hEnabled")}
+              disabled={isDone}
             />
             <NotifFlag
               sent={viewing.vapiCalled}
-              enabled={viewing.vapiEnabled}
+              enabled={isDone ? false : viewing.vapiEnabled}
               label="Hovor 30min"
               onToggle={() => toggleBuiltIn("vapi_enabled", "vapiEnabled")}
+              disabled={isDone}
             />
 
             {/* Extra notifikace */}
@@ -516,6 +531,8 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
             />
           )}
         </div>
+          );
+        })()}
 
         {/* Admin: manuální spuštění */}
         {isAdmin && (

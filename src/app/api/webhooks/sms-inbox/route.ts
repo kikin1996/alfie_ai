@@ -96,12 +96,12 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
   }
 
-  // Najít matching prohlídku podle telefonu (poslední 7 dní, stav sms_sent)
+  // Najít matching prohlídku podle telefonu (poslední 7 dní, stav sms_sent nebo pending)
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
     .select("id, user_id, client_phone, client_name, address, event_start, status")
-    .eq("status", "sms_sent")
+    .in("status", ["sms_sent", "pending"])
     .gte("event_start", since);
 
   const viewing = (viewings ?? []).find(
