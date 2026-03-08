@@ -42,7 +42,7 @@ export default function LoginPage() {
             <Calendar className="h-6 w-6" />
           </div>
           <CardTitle className="text-2xl font-display text-navy">
-            Real Estate Viewing Automator
+            Alfie
           </CardTitle>
           <CardDescription>
             Přihlaste se přes Google pro přístup ke kalendáři a automatizaci
