@@ -233,20 +233,27 @@ function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin:
   const [viewing, setViewing] = useState<Viewing>(initial);
   const [addingNotif, setAddingNotif] = useState(false);
   const [triggerState, setTriggerState] = useState<Record<string, "idle" | "busy" | "ok" | "err">>({});
+  const [triggerError, setTriggerError] = useState<string | null>(null);
 
   const trigger = async (action: "sms" | "vapi") => {
     setTriggerState((s) => ({ ...s, [action]: "busy" }));
+    setTriggerError(null);
     try {
       const res = await fetch(`/api/admin/viewings/${viewing.id}/trigger`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setTriggerError(data.error ?? "Chyba");
+      }
       setTriggerState((s) => ({ ...s, [action]: res.ok ? "ok" : "err" }));
-      setTimeout(() => setTriggerState((s) => ({ ...s, [action]: "idle" })), 3000);
+      setTimeout(() => setTriggerState((s) => ({ ...s, [action]: "idle" })), 4000);
     } catch {
+      setTriggerError("Síťová chyba");
       setTriggerState((s) => ({ ...s, [action]: "err" }));
-      setTimeout(() => setTriggerState((s) => ({ ...s, [action]: "idle" })), 3000);
+      setTimeout(() => setTriggerState((s) => ({ ...s, [action]: "idle" })), 4000);
     }
   };
 
@@ -440,6 +447,9 @@ function ViewingCard({ viewing: initial, isAdmin }: { viewing: Viewing; isAdmin:
               )}
               {triggerState.vapi === "ok" ? "Hovor zahájen" : triggerState.vapi === "err" ? "Chyba hovoru" : "Test volání 30min"}
             </button>
+            {triggerError && (
+              <p className="w-full text-[11px] text-destructive mt-1">{triggerError}</p>
+            )}
           </div>
         )}
       </CardContent>
