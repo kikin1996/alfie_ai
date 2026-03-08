@@ -370,7 +370,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
                 placeholder="Jméno klienta"
               />
             ) : (
-              <CardTitle className="text-base">Klient: {viewing.clientName || "—"}</CardTitle>
+              <CardTitle className="text-base">Klient: {(viewing.clientName || "—").split(",")[0].trim()}</CardTitle>
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
