@@ -9,6 +9,7 @@ import { getStripe } from "@/lib/stripe";
  * Vrátí: { url: string } – URL Stripe Checkout session (sandbox)
  */
 export async function POST(request: NextRequest) {
+  try {
   const supabase = await createClient();
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user?.id) {
@@ -72,4 +73,9 @@ export async function POST(request: NextRequest) {
   });
 
   return NextResponse.json({ url: checkoutSession.url });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("[checkout] error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
