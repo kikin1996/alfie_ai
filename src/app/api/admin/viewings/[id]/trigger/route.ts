@@ -86,11 +86,12 @@ export async function POST(
     if (!vapiApiKey || !vapiAssistantId || !vapiPhoneNumberId) {
       return NextResponse.json({ error: "VAPI není nakonfigurováno v nastavení" }, { status: 400 });
     }
+    const testNumber = userSettings?.broker_phone || viewing.client_phone;
     const callId = await initiateVapiCall({
       apiKey: vapiApiKey,
       assistantId: vapiAssistantId,
       phoneNumberId: vapiPhoneNumberId,
-      number: viewing.client_phone,
+      number: testNumber,
       name,
       eventId: viewing.id,
       address: viewing.address,
