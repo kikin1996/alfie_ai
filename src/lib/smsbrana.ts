@@ -25,7 +25,11 @@ export async function sendSms(
 
   const text = await res.text();
   const trimmed = text.trim();
-  console.log("[smsbrana] response:", trimmed);
-  // SMSbrána vrací "err=0" nebo prázdný string při úspěchu
-  return trimmed === "" || trimmed === "OK" || trimmed.startsWith("err=0");
+  console.log("[smsbrana] response:", JSON.stringify(trimmed));
+  // SMSbrána vrací "err=0" (nebo err=0 s ID zprávy), prázdný string nebo "OK" při úspěchu
+  // Chyba = err=<nenulové číslo>
+  if (trimmed === "" || trimmed === "OK") return true;
+  const errMatch = trimmed.match(/err=(\d+)/);
+  if (errMatch) return errMatch[1] === "0";
+  return true; // neznámý formát ale HTTP 200 – považujeme za úspěch
 }
