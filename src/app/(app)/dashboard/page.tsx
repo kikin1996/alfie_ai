@@ -28,7 +28,9 @@ import {
   AlertTriangle,
   Pencil,
   Save,
+  History,
 } from "lucide-react";
+import Link from "next/link";
 
 const statusLabels: Record<ViewingStatus, string> = {
   pending: "Čeká",
@@ -670,6 +672,12 @@ export default function DashboardPage() {
               {syncMessage.text}
             </p>
           )}
+          <Link href="/history">
+            <Button variant="outline" size="sm">
+              <History className="h-4 w-4 mr-2" />
+              Minulé / zrušené
+            </Button>
+          </Link>
           <Button variant="outline" size="sm" onClick={syncCalendar} disabled={syncing}>
             {syncing ? (
               <Loader2 className="h-4 w-4 animate-spin mr-2" />
