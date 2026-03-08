@@ -29,6 +29,7 @@ import {
   Pencil,
   Save,
   History,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -241,6 +242,9 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
   const [editing, setEditing] = useState(false);
   const [editFields, setEditFields] = useState({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone });
   const [saving, setSaving] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [removed, setRemoved] = useState(false);
 
   const saveEdit = async () => {
     setSaving(true);
@@ -340,6 +344,19 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
 
   const start = new Date(viewing.eventStart);
 
+  const handleCancel = async () => {
+    setCancelling(true);
+    try {
+      await fetch(`/api/viewings/${viewing.id}`, { method: "DELETE" });
+      setRemoved(true);
+    } finally {
+      setCancelling(false);
+      setConfirmCancel(false);
+    }
+  };
+
+  if (removed) return null;
+
   return (
     <Card className="border-navy/10">
       <CardHeader className="pb-2">
@@ -371,14 +388,24 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => { setEditFields({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone }); setEditing(true); }}
-                className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Upravit"
-              >
-                <Pencil className="h-3.5 w-3.5" />
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => { setEditFields({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone }); setEditing(true); }}
+                  className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                  title="Upravit"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmCancel(true)}
+                  className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-red-50 transition-colors"
+                  title="Zrušit prohlídku"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -406,6 +433,23 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
             <p><span className="font-medium text-foreground">Čas:</span> {format(start, "HH:mm", { locale: cs })}</p>
             {viewing.clientPhone && <p><span className="font-medium text-foreground">Tel.:</span> {viewing.clientPhone}</p>}
           </>
+        )}
+
+        {confirmCancel && (
+          <div className="flex items-center gap-2 pt-1 border-t border-red-100">
+            <span className="text-sm text-destructive font-medium">Opravdu zrušit a smazat z kalendáře?</span>
+            <Button
+              size="xs"
+              variant="destructive"
+              onClick={handleCancel}
+              disabled={cancelling}
+            >
+              {cancelling ? <Loader2 className="h-3 w-3 animate-spin" /> : "Ano, zrušit"}
+            </Button>
+            <Button size="xs" variant="outline" onClick={() => setConfirmCancel(false)} disabled={cancelling}>
+              Ne
+            </Button>
+          </div>
         )}
 
         {/* Notifikace */}
