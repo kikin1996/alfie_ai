@@ -14,6 +14,38 @@ function checkCronAuth(request: NextRequest): boolean {
   return header === `Bearer ${secret}`;
 }
 
+/** Převede "HH:MM" na hodiny jako desetinné číslo (18:30 → 18.5) */
+function parseHour(t: string): number {
+  const [h, m] = (t || "00:00").split(":").map(Number);
+  return h + (m || 0) / 60;
+}
+
+/**
+ * Vrátí efektivní čas odeslání notifikace s ohledem na mrtvou zónu.
+ * Pokud přirozený čas (event_start − offsetMin) padá mimo [startHour, endHour),
+ * posune se na předchozí den v endHour − offsetMin.
+ */
+function getEffectiveTime(eventStart: Date, offsetMinutes: number, startHour: number, endHour: number): Date {
+  const natural = new Date(eventStart.getTime() - offsetMinutes * 60000);
+  const h = natural.getHours() + natural.getMinutes() / 60;
+
+  if (h < startHour || h >= endHour) {
+    const effectiveMs = Math.max(0, endHour * 60 - offsetMinutes) * 60000;
+    const base = new Date(h < startHour
+      ? new Date(eventStart).setDate(eventStart.getDate() - 1)
+      : eventStart.getTime());
+    base.setHours(0, 0, 0, 0);
+    return new Date(base.getTime() + effectiveMs);
+  }
+
+  return natural;
+}
+
+/** true pokud je |now − effectiveTime| ≤ windowMinutes */
+function isInWindow(now: Date, effectiveTime: Date, windowMinutes: number): boolean {
+  return Math.abs(now.getTime() - effectiveTime.getTime()) / 60000 <= windowMinutes;
+}
+
 function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string): string {
   return template
     .replace(/\{address\}/g, address)
@@ -45,8 +77,6 @@ export async function GET(request: NextRequest) {
   const hasSms = appConfig?.smsbrana_login && appConfig?.smsbrana_password;
   const hasVapi = appConfig?.vapi_api_key && appConfig?.vapi_assistant_id && appConfig?.vapi_phone_number_id;
   const vapiMinutesBefore: number = appConfig?.vapi_minutes_before ?? 30;
-  const vapiWindowLow = vapiMinutesBefore - 10;
-  const vapiWindowHigh = vapiMinutesBefore + 10;
 
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
@@ -62,7 +92,7 @@ export async function GET(request: NextRequest) {
   const userIds = [...new Set(viewings.map((v) => v.user_id))];
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, sms_template, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
+    .select("user_id, sms_template, notification_time_from, notification_time_to, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
     .in("user_id", userIds);
 
   const settingsByUser = new Map((settingsList ?? []).map((s) => [s.user_id, s]));
@@ -104,7 +134,6 @@ export async function GET(request: NextRequest) {
     const userSettings = settingsByUser.get(v.user_id);
 
     const eventStart = new Date(v.event_start);
-    const diffMinutes = (eventStart.getTime() - now.getTime()) / 60000;
     const timeStr = format(eventStart, "HH:mm", { locale: cs });
     const name = v.client_name || "Klient";
     const template = userSettings?.sms_template ??
@@ -112,9 +141,11 @@ export async function GET(request: NextRequest) {
     const brokerName = userSettings?.broker_name ?? "";
     const brokerPhone = userSettings?.broker_phone ?? "";
 
+    const startHour = parseHour(userSettings?.notification_time_from ?? "08:00");
+    const endHour = parseHour(userSettings?.notification_time_to ?? "18:00");
 
-    // Okno 2h (100–140 min) — 1 kredit
-    if (!v.sms2h_sent && v.sms2h_enabled && diffMinutes >= 100 && diffMinutes <= 140 && hasSms) {
+    // Okno 2h — 1 kredit
+    if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, getEffectiveTime(eventStart, 120, startHour, endHour), 20) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
         const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone);
@@ -129,8 +160,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Okno 1h (40–80 min) — 1 kredit
-    if (!v.sms1h_sent && v.sms1h_enabled && diffMinutes >= 40 && diffMinutes <= 80 && hasSms) {
+    // Okno 1h — 1 kredit
+    if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, getEffectiveTime(eventStart, 60, startHour, endHour), 20) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
         const body = fillTemplate("Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.", v.address, timeStr, name, brokerName, brokerPhone);
@@ -145,8 +176,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Okno VAPI hovoru (vapiMinutesBefore ± 10 min) — 5 kreditů
-    if (!v.vapi_called && v.vapi_enabled && diffMinutes >= vapiWindowLow && diffMinutes <= vapiWindowHigh && hasVapi) {
+    // Okno VAPI hovoru — 5 kreditů
+    if (!v.vapi_called && v.vapi_enabled && isInWindow(now, getEffectiveTime(eventStart, vapiMinutesBefore, startHour, endHour), 10) && hasVapi) {
       const hasCredits = await deductCredits(v.user_id, 5);
       if (hasCredits) {
         const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);

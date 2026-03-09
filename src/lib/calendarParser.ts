@@ -65,6 +65,10 @@ export function isSuspiciousClientName(name: string): { suspicious: boolean; rea
   if (n.length > 3 && n === n.toLowerCase() && /[a-záčďéěíňóřšťúůýž]/.test(n)) {
     return { suspicious: true, reason: "začíná malým písmenem", fixedName: toTitleCase(n) }
   }
+  // Některé slovo začíná malým písmenem (např. "Petr mazal") → opravit
+  if (/\s[a-záčďéěíňóřšťúůýž]/.test(n)) {
+    return { suspicious: true, reason: "slovo začíná malým písmenem", fixedName: toTitleCase(n) }
+  }
   // Opakující se znaky (překlep) → odstranit duplikáty
   if (/(.)\1+/.test(n)) {
     const fixed = toTitleCase(n.replace(/(.)\1+/g, "$1"))

@@ -26,8 +26,12 @@ import {
   AlertCircle,
   Send,
   User,
+  ShieldAlert,
+  X,
 } from "lucide-react";
 import Link from "next/link";
+
+const TIME_REGEX = /^\d{2}:\d{2}$/;
 
 const schema = z.object({
   brokerName: z.string().optional(),
@@ -35,6 +39,8 @@ const schema = z.object({
   agencyName: z.string().optional(),
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
+  notificationTimeFrom: z.string().regex(TIME_REGEX, "Formát HH:MM").default("08:00"),
+  notificationTimeTo: z.string().regex(TIME_REGEX, "Formát HH:MM").default("18:00"),
   notificationChannel: z.enum(["whatsapp", "email", "both"]),
   whatsappPhone: z.string().optional(),
   whatsappApikey: z.string().optional(),
@@ -55,6 +61,7 @@ function SettingsPageInner() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
   const supabase = createClient();
 
   const form = useForm<FormValues>({
@@ -65,6 +72,8 @@ function SettingsPageInner() {
       agencyName: "",
       triggerKeyword: "#prohlidka",
       smsTemplate: defaultTemplate,
+      notificationTimeFrom: "08:00",
+      notificationTimeTo: "18:00",
       notificationChannel: "whatsapp",
       whatsappPhone: "",
       whatsappApikey: "",
@@ -83,7 +92,7 @@ function SettingsPageInner() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
+            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_time_from, notification_time_to, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -96,6 +105,8 @@ function SettingsPageInner() {
             agencyName: data.agency_name ?? "",
             triggerKeyword: data.trigger_keyword ?? "#prohlidka",
             smsTemplate: data.sms_template ?? defaultTemplate,
+            notificationTimeFrom: data.notification_time_from ?? "08:00",
+            notificationTimeTo: data.notification_time_to ?? "18:00",
             notificationChannel: (data.notification_channel as "whatsapp" | "email" | "both") ?? "whatsapp",
             whatsappPhone: data.whatsapp_phone ?? "",
             whatsappApikey: data.whatsapp_apikey ?? "",
@@ -128,6 +139,8 @@ function SettingsPageInner() {
           agency_name: values.agencyName || null,
           trigger_keyword: values.triggerKeyword,
           sms_template: values.smsTemplate,
+          notification_time_from: values.notificationTimeFrom,
+          notification_time_to: values.notificationTimeTo,
           notification_channel: values.notificationChannel,
           whatsapp_phone: values.whatsappPhone || null,
           whatsapp_apikey: values.whatsappApikey || null,
@@ -168,6 +181,46 @@ function SettingsPageInner() {
 
   return (
     <div className="p-6 max-w-2xl">
+      {/* Modal – upozornění před propojením kalendáře */}
+      {showCalendarModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-background rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+            <button
+              type="button"
+              onClick={() => setShowCalendarModal(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-amber-100">
+                <ShieldAlert className="h-5 w-5 text-amber-600" />
+              </div>
+              <h2 className="text-lg font-semibold text-foreground">Upozornění Google</h2>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              Google vám zobrazí varování <strong className="text-foreground">„Tato aplikace není ověřena"</strong>.
+            </p>
+            <p className="text-sm text-muted-foreground mb-3">
+              Aplikace <strong className="text-foreground">Alfie AI</strong> je v Beta fázi a aktuálně prochází procesem ověření ze strany Google. Vaše data jsou v bezpečí – přistupujeme pouze ke čtení vašich událostí v kalendáři.
+            </p>
+            <p className="text-sm text-muted-foreground mb-5">
+              Klikněte na <strong className="text-foreground">„Pokročilé"</strong> a poté na{" "}
+              <strong className="text-foreground">„Přejít na alfie-ai (nezabezpečené)"</strong> pro dokončení propojení.
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="outline" onClick={() => setShowCalendarModal(false)}>
+                Zrušit
+              </Button>
+              <Button type="button" variant="navy" asChild>
+                <Link href="/api/auth/google-calendar">
+                  Rozumím, propojit kalendář
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       <h1 className="text-2xl font-display font-semibold text-navy mb-2">
         Nastavení
       </h1>
@@ -251,10 +304,8 @@ function SettingsPageInner() {
                   <CheckCircle className="h-4 w-4" /> Kalendář je propojen
                 </p>
               )}
-              <Button type="button" variant="outline" asChild>
-                <Link href="/api/auth/google-calendar">
-                  {calendarConnected ? "Znovu propojit Google Kalendář" : "Propojit Google Kalendář"}
-                </Link>
+              <Button type="button" variant="outline" onClick={() => setShowCalendarModal(true)}>
+                {calendarConnected ? "Znovu propojit Google Kalendář" : "Propojit Google Kalendář"}
               </Button>
             </div>
             <div>
@@ -299,6 +350,58 @@ function SettingsPageInner() {
                 </p>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Časové okno */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Časové okno pro notifikace</CardTitle>
+            <CardDescription>
+              SMS a hovory se odesílají jen v tomto čase. Pokud by notifikace vyšla mimo okno, posune se na předchozí den ve{" "}
+              <strong>{form.watch("notificationTimeTo") || "18:00"}</strong> − offset.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div>
+                <Label htmlFor="notificationTimeFrom">Nejdříve (ráno)</Label>
+                <Input
+                  id="notificationTimeFrom"
+                  type="time"
+                  {...form.register("notificationTimeFrom")}
+                  className="mt-1 w-32"
+                />
+                {form.formState.errors.notificationTimeFrom && (
+                  <p className="text-sm text-destructive mt-1">{form.formState.errors.notificationTimeFrom.message}</p>
+                )}
+              </div>
+              <div className="pt-5 text-muted-foreground">–</div>
+              <div>
+                <Label htmlFor="notificationTimeTo">Nejpozději (večer)</Label>
+                <Input
+                  id="notificationTimeTo"
+                  type="time"
+                  {...form.register("notificationTimeTo")}
+                  className="mt-1 w-32"
+                />
+                {form.formState.errors.notificationTimeTo && (
+                  <p className="text-sm text-destructive mt-1">{form.formState.errors.notificationTimeTo.message}</p>
+                )}
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3">
+              Příklad: prohlídka v 8:00, SMS 2h by šla v 6:00 (mrtvá zóna) → posune se na předchozí den v{" "}
+              {(() => {
+                const to = form.watch("notificationTimeTo") || "18:00";
+                const [h, m] = to.split(":").map(Number);
+                const shifted2h = new Date(0, 0, 0, h, m - 120);
+                const shifted1h = new Date(0, 0, 0, h, m - 60);
+                const shifted30 = new Date(0, 0, 0, h, m - 30);
+                const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+                return `${fmt(shifted2h)} (SMS 2h), ${fmt(shifted1h)} (SMS 1h), ${fmt(shifted30)} (hovor)`;
+              })()}
+            </p>
           </CardContent>
         </Card>
 
