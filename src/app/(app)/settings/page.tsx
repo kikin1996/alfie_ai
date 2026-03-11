@@ -41,6 +41,9 @@ const schema = z.object({
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
   notificationTimeFrom: z.string().regex(TIME_REGEX, "Formát HH:MM").default("08:00"),
   notificationTimeTo: z.string().regex(TIME_REGEX, "Formát HH:MM").default("18:00"),
+  defaultSms2hEnabled: z.boolean().default(true),
+  defaultSms1hEnabled: z.boolean().default(true),
+  defaultVapiEnabled: z.boolean().default(true),
   notificationChannel: z.enum(["whatsapp", "email", "both"]),
   whatsappPhone: z.string().optional(),
   whatsappApikey: z.string().optional(),
@@ -74,6 +77,9 @@ function SettingsPageInner() {
       smsTemplate: defaultTemplate,
       notificationTimeFrom: "08:00",
       notificationTimeTo: "18:00",
+      defaultSms2hEnabled: true,
+      defaultSms1hEnabled: true,
+      defaultVapiEnabled: true,
       notificationChannel: "whatsapp",
       whatsappPhone: "",
       whatsappApikey: "",
@@ -92,7 +98,7 @@ function SettingsPageInner() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_time_from, notification_time_to, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
+            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -107,6 +113,9 @@ function SettingsPageInner() {
             smsTemplate: data.sms_template ?? defaultTemplate,
             notificationTimeFrom: data.notification_time_from ?? "08:00",
             notificationTimeTo: data.notification_time_to ?? "18:00",
+            defaultSms2hEnabled: data.default_sms2h_enabled ?? true,
+            defaultSms1hEnabled: data.default_sms1h_enabled ?? true,
+            defaultVapiEnabled: data.default_vapi_enabled ?? true,
             notificationChannel: (data.notification_channel as "whatsapp" | "email" | "both") ?? "whatsapp",
             whatsappPhone: data.whatsapp_phone ?? "",
             whatsappApikey: data.whatsapp_apikey ?? "",
@@ -141,6 +150,9 @@ function SettingsPageInner() {
           sms_template: values.smsTemplate,
           notification_time_from: values.notificationTimeFrom,
           notification_time_to: values.notificationTimeTo,
+          default_sms2h_enabled: values.defaultSms2hEnabled,
+          default_sms1h_enabled: values.defaultSms1hEnabled,
+          default_vapi_enabled: values.defaultVapiEnabled,
           notification_channel: values.notificationChannel,
           whatsapp_phone: values.whatsappPhone || null,
           whatsapp_apikey: values.whatsappApikey || null,
@@ -349,6 +361,44 @@ function SettingsPageInner() {
                   {form.formState.errors.smsTemplate.message}
                 </p>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Výchozí notifikace */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Výchozí notifikace pro nové prohlídky</CardTitle>
+            <CardDescription>
+              Při přidání nové prohlídky z kalendáře se použijí tato nastavení. Každou prohlídku lze pak upravit individuálně přímo v dashboardu.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {(
+                [
+                  { field: "defaultSms2hEnabled", label: "SMS 2h před prohlídkou", desc: "Připomenutí 2 hodiny předem" },
+                  { field: "defaultSms1hEnabled", label: "SMS 1h před prohlídkou", desc: "Připomenutí hodinu předem" },
+                  { field: "defaultVapiEnabled",  label: "Hlasový hovor 30min před", desc: "Automatický VAPI hovor půl hodiny předem" },
+                ] as const
+              ).map(({ field, label, desc }) => (
+                <label key={field} className="flex items-center justify-between gap-4 cursor-pointer rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{label}</p>
+                    <p className="text-xs text-muted-foreground">{desc}</p>
+                  </div>
+                  <div
+                    role="switch"
+                    aria-checked={form.watch(field)}
+                    onClick={() => form.setValue(field, !form.watch(field), { shouldDirty: true })}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                      form.watch(field) ? "bg-navy" : "bg-muted-foreground/30"
+                    }`}
+                  >
+                    <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.watch(field) ? "translate-x-4" : "translate-x-0"}`} />
+                  </div>
+                </label>
+              ))}
             </div>
           </CardContent>
         </Card>

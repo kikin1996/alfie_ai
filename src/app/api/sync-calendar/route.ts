@@ -49,7 +49,7 @@ export async function POST() {
 
   const { data: settings } = await supabaseAdmin
     .from("user_settings")
-    .select("trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email")
+    .select("trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled")
     .eq("user_id", session.user.id)
     .maybeSingle();
 
@@ -122,8 +122,27 @@ export async function POST() {
       const nameCheck = isSuspiciousClientName(parsed.clientName);
       const clientName = nameCheck.fixedName ?? parsed.clientName;
 
-      await supabaseAdmin.from("viewings").upsert(
-        {
+      // Zjistit, zda prohlídka již existuje
+      const { data: existing } = await supabaseAdmin
+        .from("viewings")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .eq("calendar_event_id", ev.id)
+        .maybeSingle();
+
+      if (existing) {
+        // Existuje – aktualizovat jen metadata, NEpřepisovat uživatelova nastavení notifikací
+        await supabaseAdmin.from("viewings").update({
+          address: parsed.address,
+          client_phone: parsed.clientPhone,
+          client_name: clientName,
+          event_start: parsed.start,
+          event_end: parsed.end,
+          updated_at: new Date().toISOString(),
+        }).eq("id", existing.id);
+      } else {
+        // Nová prohlídka – použít výchozí nastavení notifikací z user_settings
+        await supabaseAdmin.from("viewings").insert({
           user_id: session.user.id,
           calendar_event_id: ev.id,
           address: parsed.address,
@@ -131,10 +150,12 @@ export async function POST() {
           client_name: clientName,
           event_start: parsed.start,
           event_end: parsed.end,
+          sms2h_enabled: settings?.default_sms2h_enabled ?? true,
+          sms1h_enabled: settings?.default_sms1h_enabled ?? true,
+          vapi_enabled: settings?.default_vapi_enabled ?? true,
           updated_at: new Date().toISOString(),
-        },
-        { onConflict: "user_id,calendar_event_id" }
-      );
+        });
+      }
       if (isMissingPhone(parsed.clientPhone)) {
         missingPhoneItems.push({ address: parsed.address, start: parsed.start });
       }

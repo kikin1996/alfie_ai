@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email")
+    .select("user_id, trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled")
     .not("google_refresh_token", "is", null);
 
   if (!settingsList?.length) {
@@ -73,6 +73,9 @@ export async function GET(request: NextRequest) {
     whatsapp_apikey?: string;
     notification_channel?: string;
     notification_email?: string;
+    default_sms2h_enabled?: boolean;
+    default_sms1h_enabled?: boolean;
+    default_vapi_enabled?: boolean;
   }[]) {
     const missingPhoneItems: { address: string; start: string }[] = [];
       const suspiciousNameItems: { address: string; start: string; name: string; reason: string }[] = [];
@@ -129,8 +132,24 @@ export async function GET(request: NextRequest) {
         const nameCheck = isSuspiciousClientName(parsed.clientName);
         const clientName = nameCheck.fixedName ?? parsed.clientName;
 
-        await supabaseAdmin.from("viewings").upsert(
-          {
+        const { data: existing } = await supabaseAdmin
+          .from("viewings")
+          .select("id")
+          .eq("user_id", row.user_id)
+          .eq("calendar_event_id", ev.id)
+          .maybeSingle();
+
+        if (existing) {
+          await supabaseAdmin.from("viewings").update({
+            address: parsed.address,
+            client_phone: parsed.clientPhone,
+            client_name: clientName,
+            event_start: parsed.start,
+            event_end: parsed.end,
+            updated_at: new Date().toISOString(),
+          }).eq("id", existing.id);
+        } else {
+          await supabaseAdmin.from("viewings").insert({
             user_id: row.user_id,
             calendar_event_id: ev.id,
             address: parsed.address,
@@ -138,10 +157,12 @@ export async function GET(request: NextRequest) {
             client_name: clientName,
             event_start: parsed.start,
             event_end: parsed.end,
+            sms2h_enabled: row.default_sms2h_enabled ?? true,
+            sms1h_enabled: row.default_sms1h_enabled ?? true,
+            vapi_enabled: row.default_vapi_enabled ?? true,
             updated_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id,calendar_event_id" }
-        );
+          });
+        }
         if (isMissingPhone(parsed.clientPhone)) {
           missingPhoneItems.push({ address: parsed.address, start: parsed.start });
         }
