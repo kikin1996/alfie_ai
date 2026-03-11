@@ -200,9 +200,7 @@ export async function GET(request: NextRequest) {
       const notif = updatedExtras[i];
       if (notif.sent || !notif.enabled) continue;
 
-      const windowLow = notif.minutesBefore - 20;
-      const windowHigh = notif.minutesBefore + 20;
-      if (diffMinutes < windowLow || diffMinutes > windowHigh) continue;
+      if (!isInWindow(now, getEffectiveTime(eventStart, notif.minutesBefore, startHour, endHour), 20)) continue;
 
       if (notif.type === "sms" && hasSms) {
         const hasCredits = await deductCredits(v.user_id, 1);
