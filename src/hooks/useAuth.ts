@@ -49,7 +49,10 @@ export function useAuth() {
     const origin = typeof window !== "undefined" ? window.location.origin : ""
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${origin}/dashboard` },
+      options: {
+        redirectTo: `${origin}/auth/callback`,
+        scopes: "https://www.googleapis.com/auth/calendar.readonly",
+      },
     })
   }
 
