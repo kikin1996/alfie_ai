@@ -69,11 +69,8 @@ export default function LoginPage() {
               <a href="/api/dev-admin">Vstoupit jako admin (náhled)</a>
             </Button>
           )}
-          <p className="text-center text-sm text-muted-foreground">
-            Nemáte účet?{" "}
-            <a href="/register" className="text-navy underline">
-              Zaregistrujte se
-            </a>
+          <p className="text-center text-xs text-muted-foreground">
+            Přihlášením přes Google se účet vytvoří automaticky, pokud ještě neexistuje.
           </p>
         </CardContent>
       </Card>
