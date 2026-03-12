@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled")
+    .select("user_id, trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications")
     .not("google_refresh_token", "is", null);
 
   if (!settingsList?.length) {
@@ -76,6 +76,7 @@ export async function GET(request: NextRequest) {
     default_sms2h_enabled?: boolean;
     default_sms1h_enabled?: boolean;
     default_vapi_enabled?: boolean;
+    default_extra_notifications?: { id: string; type: string; minutesBefore: number; label: string }[];
   }[]) {
     const missingPhoneItems: { address: string; start: string }[] = [];
       const suspiciousNameItems: { address: string; start: string; name: string; reason: string }[] = [];
@@ -160,6 +161,12 @@ export async function GET(request: NextRequest) {
             sms2h_enabled: row.default_sms2h_enabled ?? true,
             sms1h_enabled: row.default_sms1h_enabled ?? true,
             vapi_enabled: row.default_vapi_enabled ?? true,
+            extra_notifications: (row.default_extra_notifications ?? []).map((n) => ({
+              ...n,
+              id: crypto.randomUUID(),
+              sent: false,
+              enabled: true,
+            })),
             updated_at: new Date().toISOString(),
           });
         }

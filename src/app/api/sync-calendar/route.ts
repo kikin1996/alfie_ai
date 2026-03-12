@@ -49,7 +49,7 @@ export async function POST() {
 
   const { data: settings } = await supabaseAdmin
     .from("user_settings")
-    .select("trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled")
+    .select("trigger_keyword, google_refresh_token, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications")
     .eq("user_id", session.user.id)
     .maybeSingle();
 
@@ -153,6 +153,12 @@ export async function POST() {
           sms2h_enabled: settings?.default_sms2h_enabled ?? true,
           sms1h_enabled: settings?.default_sms1h_enabled ?? true,
           vapi_enabled: settings?.default_vapi_enabled ?? true,
+          extra_notifications: ((settings?.default_extra_notifications ?? []) as { id: string; type: string; minutesBefore: number; label: string }[]).map((n) => ({
+            ...n,
+            id: crypto.randomUUID(),
+            sent: false,
+            enabled: true,
+          })),
           updated_at: new Date().toISOString(),
         });
       }

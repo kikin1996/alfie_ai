@@ -28,10 +28,19 @@ import {
   User,
   ShieldAlert,
   X,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 
 const TIME_REGEX = /^\d{2}:\d{2}$/;
+
+interface DefaultExtra {
+  id: string;
+  type: "sms" | "vapi";
+  minutesBefore: number;
+  label: string;
+}
 
 const schema = z.object({
   brokerName: z.string().optional(),
@@ -65,6 +74,11 @@ function SettingsPageInner() {
   const [saveOk, setSaveOk] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [defaultExtras, setDefaultExtras] = useState<DefaultExtra[]>([]);
+  const [addingExtra, setAddingExtra] = useState(false);
+  const [newExtraType, setNewExtraType] = useState<"sms" | "vapi">("sms");
+  const [newExtraMinutes, setNewExtraMinutes] = useState(90);
+  const [newExtraLabel, setNewExtraLabel] = useState("");
   const supabase = createClient();
 
   const form = useForm<FormValues>({
@@ -98,13 +112,14 @@ function SettingsPageInner() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
+            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
         ]);
         const data = settingsRes.data;
         if (data) {
+          setDefaultExtras((data.default_extra_notifications as DefaultExtra[]) ?? []);
           form.reset({
             brokerName: data.broker_name ?? "",
             brokerPhone: data.broker_phone ?? "",
@@ -153,6 +168,7 @@ function SettingsPageInner() {
           default_sms2h_enabled: values.defaultSms2hEnabled,
           default_sms1h_enabled: values.defaultSms1hEnabled,
           default_vapi_enabled: values.defaultVapiEnabled,
+          default_extra_notifications: defaultExtras,
           notification_channel: values.notificationChannel,
           whatsapp_phone: values.whatsappPhone || null,
           whatsapp_apikey: values.whatsappApikey || null,
@@ -399,6 +415,108 @@ function SettingsPageInner() {
                   </div>
                 </label>
               ))}
+            </div>
+
+            {/* Vlastní výchozí notifikace */}
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium text-foreground">Vlastní notifikace</p>
+                <button
+                  type="button"
+                  onClick={() => setAddingExtra(true)}
+                  className="flex items-center gap-1 text-xs text-navy hover:underline"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Přidat
+                </button>
+              </div>
+
+              {defaultExtras.length === 0 && !addingExtra && (
+                <p className="text-xs text-muted-foreground py-2">Žádné vlastní notifikace. Klikněte na „Přidat" pro přidání.</p>
+              )}
+
+              <div className="space-y-2">
+                {defaultExtras.map((n) => (
+                  <div key={n.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${n.type === "sms" ? "bg-blue-50 text-blue-700" : "bg-violet-50 text-violet-700"}`}>
+                        {n.type === "sms" ? "SMS" : "Hovor"}
+                      </span>
+                      <span className="text-sm text-foreground">{n.label || `${n.minutesBefore} min před`}</span>
+                      <span className="text-xs text-muted-foreground">({n.minutesBefore} min)</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setDefaultExtras((prev) => prev.filter((x) => x.id !== n.id))}
+                      className="text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {addingExtra && (
+                <div className="mt-2 rounded-lg border border-navy/20 bg-muted/20 p-3 space-y-3">
+                  <p className="text-xs font-medium text-foreground">Nová notifikace</p>
+                  <div className="flex gap-2">
+                    {(["sms", "vapi"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setNewExtraType(t)}
+                        className={`px-3 py-1 rounded-full text-xs border transition-all ${newExtraType === t ? "bg-navy text-white border-navy" : "bg-background border-border text-muted-foreground"}`}
+                      >
+                        {t === "sms" ? "SMS" : "Hovor (VAPI)"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="text-xs text-muted-foreground block mb-1">Název (volitelný)</label>
+                      <Input
+                        value={newExtraLabel}
+                        onChange={(e) => setNewExtraLabel(e.target.value)}
+                        placeholder={newExtraType === "sms" ? "SMS 90min před" : "Hovor 45min před"}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Minut před</label>
+                      <Input
+                        type="number"
+                        min={5}
+                        max={1440}
+                        value={newExtraMinutes}
+                        onChange={(e) => setNewExtraMinutes(Number(e.target.value))}
+                        className="h-8 text-sm w-24"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setAddingExtra(false); setNewExtraLabel(""); setNewExtraMinutes(90); }}>
+                      Zrušit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="navy"
+                      size="sm"
+                      onClick={() => {
+                        setDefaultExtras((prev) => [...prev, {
+                          id: crypto.randomUUID(),
+                          type: newExtraType,
+                          minutesBefore: newExtraMinutes,
+                          label: newExtraLabel || `${newExtraType === "sms" ? "SMS" : "Hovor"} ${newExtraMinutes}min před`,
+                        }]);
+                        setAddingExtra(false);
+                        setNewExtraLabel("");
+                        setNewExtraMinutes(90);
+                      }}
+                    >
+                      Přidat
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
