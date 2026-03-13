@@ -85,11 +85,13 @@ export async function GET(request: NextRequest) {
   const hasVapi = appConfig?.vapi_api_key && appConfig?.vapi_assistant_id && appConfig?.vapi_phone_number_id;
   const vapiMinutesBefore: number = 5; // TEST (původně: appConfig?.vapi_minutes_before ?? 30)
 
+  // Lookback 30 min za start – aby cron stihl notifikace s malým offsetem (5, 10, 15 min)
+  const lookbackCutoff = new Date(Date.now() - 30 * 60000).toISOString();
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
     .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status, sms_sent_at, sms1h_sent_at, sms2h_noconfirm_notified, sms1h_noconfirm_notified")
     .not("status", "in", '("confirmed","cancelled")')
-    .gte("event_start", new Date().toISOString());
+    .gte("event_start", lookbackCutoff);
 
   if (!viewings?.length) {
     return NextResponse.json({ ok: true, actions: 0 });
@@ -213,7 +215,9 @@ export async function GET(request: NextRequest) {
       if (notif.sent || !notif.enabled) continue;
 
       const effectiveExtra = getEffectiveTime(eventStart, notif.minutesBefore, startHour, endHour);
-      if (!isInWindow(now, effectiveExtra, 20)) continue;
+      // Adaptivní okno: malé offsety (5, 10 min) dostanou užší okno, aby nekryly jiné notifikace
+      const extraWindow = Math.min(notif.minutesBefore + 5, 20);
+      if (!isInWindow(now, effectiveExtra, extraWindow)) continue;
 
       if (notif.type === "sms" && hasSms) {
         const hasCredits = await deductCredits(v.user_id, 1);
