@@ -62,7 +62,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const defaultTemplate =
-  "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";
+  "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address}  v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";
 
 function SettingsPageInner() {
   const { user, loading: authLoading } = useAuth();
@@ -358,7 +358,7 @@ function SettingsPageInner() {
         {/* Šablona SMS */}
         <Card>
           <CardHeader>
-            <CardTitle>Šablona SMS (2h před)</CardTitle>
+            <CardTitle>Šablona SMS</CardTitle>
             <CardDescription>
               Placeholdery: {"{address}"}, {"{time}"}, {"{clientName}"}
             </CardDescription>
