@@ -46,13 +46,6 @@ function isInWindow(now: Date, effectiveTime: Date, windowMinutes: number): bool
   return Math.abs(now.getTime() - effectiveTime.getTime()) / 60000 <= windowMinutes;
 }
 
-/** true pokud effectiveTime padá na jiný (předchozí) den než eventStart */
-function isSendingDayBefore(effectiveTime: Date, eventStart: Date): boolean {
-  const eDay = new Date(effectiveTime); eDay.setHours(0, 0, 0, 0);
-  const sDay = new Date(eventStart);    sDay.setHours(0, 0, 0, 0);
-  return eDay.getTime() < sDay.getTime();
-}
-
 function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string): string {
   return template
     .replace(/\{address\}/g, address)
@@ -83,15 +76,13 @@ export async function GET(request: NextRequest) {
 
   const hasSms = appConfig?.smsbrana_login && appConfig?.smsbrana_password;
   const hasVapi = appConfig?.vapi_api_key && appConfig?.vapi_assistant_id && appConfig?.vapi_phone_number_id;
-  const vapiMinutesBefore: number = 5; // TEST (původně: appConfig?.vapi_minutes_before ?? 30)
+  const vapiMinutesBefore: number = appConfig?.vapi_minutes_before ?? 30;
 
-  // Lookback 30 min za start – aby cron stihl notifikace s malým offsetem (5, 10, 15 min)
-  const lookbackCutoff = new Date(Date.now() - 30 * 60000).toISOString();
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
-    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status, sms_sent_at, sms1h_sent_at, sms2h_noconfirm_notified, sms1h_noconfirm_notified")
+    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status")
     .not("status", "in", '("confirmed","cancelled")')
-    .gte("event_start", lookbackCutoff);
+    .gte("event_start", new Date().toISOString());
 
   if (!viewings?.length) {
     return NextResponse.json({ ok: true, actions: 0 });
@@ -139,8 +130,6 @@ export async function GET(request: NextRequest) {
     sms1h_sent: boolean; vapi_called: boolean; sms2h_enabled: boolean;
     sms1h_enabled: boolean; vapi_enabled: boolean;
     extra_notifications: ExtraNotification[]; status: string;
-    sms_sent_at: string | null; sms1h_sent_at: string | null;
-    sms2h_noconfirm_notified: boolean; sms1h_noconfirm_notified: boolean;
   }[]) {
     const userSettings = settingsByUser.get(v.user_id);
 
@@ -156,12 +145,10 @@ export async function GET(request: NextRequest) {
     const endHour = parseHour(userSettings?.notification_time_to ?? "18:00");
 
     // Okno 2h — 1 kredit
-    const effective2h = getEffectiveTime(eventStart, 15, startHour, endHour);
-    if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, effective2h, 20) && hasSms) {
+    if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, getEffectiveTime(eventStart, 120, startHour, endHour), 20) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
-        const t2h = isSendingDayBefore(effective2h, eventStart) ? template.replace(/dnešní/g, "zítřejší") : template;
-        const body = fillTemplate(t2h, v.address, timeStr, name, brokerName, brokerPhone);
+        const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone);
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
           await supabaseAdmin.from("viewings").update({ sms2h_sent: true, status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
@@ -174,14 +161,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Okno 1h — 1 kredit
-    const effective1h = getEffectiveTime(eventStart, 10, startHour, endHour);
-    if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, effective1h, 20) && hasSms) {
+    if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, getEffectiveTime(eventStart, 60, startHour, endHour), 20) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
         const body = fillTemplate("Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.", v.address, timeStr, name, brokerName, brokerPhone);
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
-          await supabaseAdmin.from("viewings").update({ sms1h_sent: true, sms1h_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
+          await supabaseAdmin.from("viewings").update({ sms1h_sent: true, updated_at: now.toISOString() }).eq("id", v.id);
           if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);
           actions++;
         }
@@ -214,16 +200,12 @@ export async function GET(request: NextRequest) {
       const notif = updatedExtras[i];
       if (notif.sent || !notif.enabled) continue;
 
-      const effectiveExtra = getEffectiveTime(eventStart, notif.minutesBefore, startHour, endHour);
-      // Adaptivní okno: malé offsety (5, 10 min) dostanou užší okno, aby nekryly jiné notifikace
-      const extraWindow = Math.min(notif.minutesBefore + 5, 20);
-      if (!isInWindow(now, effectiveExtra, extraWindow)) continue;
+      if (!isInWindow(now, getEffectiveTime(eventStart, notif.minutesBefore, startHour, endHour), 20)) continue;
 
       if (notif.type === "sms" && hasSms) {
         const hasCredits = await deductCredits(v.user_id, 1);
         if (hasCredits) {
-          const tExtra = isSendingDayBefore(effectiveExtra, eventStart) ? template.replace(/dnešní/g, "zítřejší") : template;
-          const body = fillTemplate(tExtra, v.address, timeStr, name, brokerName, brokerPhone);
+          const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
             updatedExtras[i] = { ...notif, sent: true };
@@ -248,48 +230,6 @@ export async function GET(request: NextRequest) {
 
     if (extrasUpdated) {
       await supabaseAdmin.from("viewings").update({ extra_notifications: updatedExtras, updated_at: now.toISOString() }).eq("id", v.id);
-    }
-
-    // Upozornění maklérovi při nepotvrzení do 10 minut
-    const NOCONFIRM_DELAY = 10 * 60 * 1000; // 10 minut v ms
-
-    // Po SMS 2h
-    if (
-      v.sms2h_sent &&
-      !v.sms2h_noconfirm_notified &&
-      v.sms_sent_at &&
-      now.getTime() - new Date(v.sms_sent_at).getTime() >= NOCONFIRM_DELAY &&
-      userSettings
-    ) {
-      const effective1hTime = format(getEffectiveTime(eventStart, 10, startHour, endHour), "HH:mm", { locale: cs });
-      await notify(
-        userSettings,
-        `⏳ SMS zatím nebyla potvrzena – ${name}`,
-        `⏳ SMS zatím nebyla potvrzena.\n👤 ${name} (${v.client_phone})\n📍 ${v.address}\n📨 Druhá SMS proběhne v ${effective1hTime}`
-      ).catch(() => {});
-      await supabaseAdmin.from("viewings").update({ sms2h_noconfirm_notified: true, updated_at: now.toISOString() }).eq("id", v.id);
-    }
-
-    // Po SMS 1h
-    if (
-      v.sms1h_sent &&
-      !v.sms1h_noconfirm_notified &&
-      v.sms1h_sent_at &&
-      now.getTime() - new Date(v.sms1h_sent_at).getTime() >= NOCONFIRM_DELAY &&
-      userSettings
-    ) {
-      const nextStepParts: string[] = [];
-      if (v.vapi_enabled && hasVapi) {
-        const effectiveVapiTime = format(getEffectiveTime(eventStart, vapiMinutesBefore, startHour, endHour), "HH:mm", { locale: cs });
-        nextStepParts.push(`hovor v ${effectiveVapiTime}`);
-      }
-      const nextStep = nextStepParts.length > 0 ? `\n📞 Další krok: ${nextStepParts.join(", ")}` : "";
-      await notify(
-        userSettings,
-        `⏳ Druhá SMS nebyla potvrzena – ${name}`,
-        `⏳ Druhá SMS nebyla potvrzena.\n👤 ${name} (${v.client_phone})\n📍 ${v.address}${nextStep}`
-      ).catch(() => {});
-      await supabaseAdmin.from("viewings").update({ sms1h_noconfirm_notified: true, updated_at: now.toISOString() }).eq("id", v.id);
     }
   }
 
