@@ -20,5 +20,7 @@ export async function GET() {
     description: p.description,
     sortOrder: p.sort_order,
   }));
-  return NextResponse.json(mapped);
+  return NextResponse.json(mapped, {
+    headers: { "Cache-Control": "no-store" },
+  });
 }
