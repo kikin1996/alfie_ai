@@ -1,6 +1,6 @@
 # Alfie AI
 
-Aplikace pro makléře: automatizace prohlídek přes SMS a VAPI hovory, Google Kalendář, kreditový systém s předplatným přes Stripe.
+Aplikace pro realitní makléře: automatizace prohlídek přes SMS a VAPI hovory, Google Kalendář, kreditový systém s předplatným přes Stripe.
 
 ## Stack
 
