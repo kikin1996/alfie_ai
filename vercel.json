@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/send-reminder-sms",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/cron/renew-subscriptions",
