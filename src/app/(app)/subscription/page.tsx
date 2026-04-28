@@ -24,13 +24,10 @@ const PLAN_FEATURES: Record<string, string[]> = {
   business: ["SMS notifikace (1 kredit)", "VAPI hovory (5 kreditů)", "Dedikovaná podpora"],
 };
 
-// Starter je základ pro výpočet slevy: 99 Kč / 30 kreditů
-const BASE_PRICE_PER_CREDIT = 99 / 30;
-
-function PlanDiscount(plan: SubscriptionPlan): number | null {
+function PlanDiscount(plan: SubscriptionPlan, basePricePerCredit: number): number | null {
   if (!plan.creditsPerMonth || !plan.priceCzk) return null;
   const pricePerCredit = plan.priceCzk / plan.creditsPerMonth;
-  const saving = Math.round((1 - pricePerCredit / BASE_PRICE_PER_CREDIT) * 100);
+  const saving = Math.round((1 - pricePerCredit / basePricePerCredit) * 100);
   return saving > 0 ? saving : null;
 }
 
@@ -190,10 +187,15 @@ function SubscriptionPageInner() {
 
       {/* Plány */}
       <div className="grid gap-6 md:grid-cols-3">
-        {plans.map((plan) => {
+        {(() => {
+          const starterPlan = plans.find((p) => p.id === "starter");
+          const basePricePerCredit = starterPlan && starterPlan.creditsPerMonth
+            ? starterPlan.priceCzk / starterPlan.creditsPerMonth
+            : 99 / 30;
+          return plans.map((plan) => {
           const isCurrent = plan.id === currentPlanId;
           const features = PLAN_FEATURES[plan.id] ?? [];
-          const discount = PlanDiscount(plan);
+          const discount = PlanDiscount(plan, basePricePerCredit);
           const pricePerCredit = plan.creditsPerMonth
             ? (plan.priceCzk / plan.creditsPerMonth).toFixed(2).replace(".", ",")
             : null;
@@ -292,7 +294,8 @@ function SubscriptionPageInner() {
               </CardContent>
             </Card>
           );
-        })}
+        });
+        })()}
       </div>
 
       <p className="text-xs text-muted-foreground text-center">
