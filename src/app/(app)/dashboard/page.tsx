@@ -495,21 +495,21 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
             <NotifFlag
               sent={viewing.sms2hSent}
               enabled={isDone ? false : viewing.sms2hEnabled}
-              label="SMS 15min"
+              label="SMS 2h"
               onToggle={() => toggleBuiltIn("sms2h_enabled", "sms2hEnabled")}
               disabled={isDone}
             />
             <NotifFlag
               sent={viewing.sms1hSent}
               enabled={isDone ? false : viewing.sms1hEnabled}
-              label="SMS 10min"
+              label="SMS 1h"
               onToggle={() => toggleBuiltIn("sms1h_enabled", "sms1hEnabled")}
               disabled={isDone}
             />
             <NotifFlag
               sent={viewing.vapiCalled}
               enabled={isDone ? false : viewing.vapiEnabled}
-              label="Hovor 5min"
+              label="Hovor 30min"
               onToggle={() => toggleBuiltIn("vapi_enabled", "vapiEnabled")}
               disabled={isDone}
             />

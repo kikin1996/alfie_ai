@@ -109,20 +109,11 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (plan) {
-        // Načíst aktuální zbývající kredity
-        const { data: currentSub } = await supabaseAdmin
-          .from("user_subscriptions")
-          .select("credits_remaining")
-          .eq("stripe_subscription_id", stripeSub.id)
-          .maybeSingle();
-
-        const currentCredits = currentSub?.credits_remaining ?? 0;
-
         await supabaseAdmin
           .from("user_subscriptions")
           .update({
             plan_id: plan.id,
-            credits_remaining: currentCredits + plan.credits_per_month,
+            credits_remaining: plan.credits_per_month,
             status: "active",
             updated_at: new Date().toISOString(),
           })
