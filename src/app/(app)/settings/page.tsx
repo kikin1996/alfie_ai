@@ -48,8 +48,6 @@ const schema = z.object({
   agencyName: z.string().optional(),
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
-  smsbranaLogin: z.string().optional(),
-  smsbranaPassword: z.string().optional(),
   notificationTimeFrom: z.string().regex(TIME_REGEX, "Formát HH:MM").default("08:00"),
   notificationTimeTo: z.string().regex(TIME_REGEX, "Formát HH:MM").default("18:00"),
   defaultSms2hEnabled: z.boolean().default(true),
@@ -74,9 +72,6 @@ function SettingsPageInner() {
   const [loaded, setLoaded] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
-  const [smsTestPhone, setSmsTestPhone] = useState("");
-  const [smsTesting, setSmsTesting] = useState(false);
-  const [smsTestResult, setSmsTestResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [defaultExtras, setDefaultExtras] = useState<DefaultExtra[]>([]);
@@ -103,8 +98,6 @@ function SettingsPageInner() {
       whatsappPhone: "",
       whatsappApikey: "",
       notificationEmail: "",
-      smsbranaLogin: "",
-      smsbranaPassword: "",
     },
   });
 
@@ -119,7 +112,7 @@ function SettingsPageInner() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, smsbrana_login, smsbrana_password, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
+            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -142,8 +135,6 @@ function SettingsPageInner() {
             whatsappPhone: data.whatsapp_phone ?? "",
             whatsappApikey: data.whatsapp_apikey ?? "",
             notificationEmail: data.notification_email ?? "",
-            smsbranaLogin: (data as Record<string, unknown>).smsbrana_login as string ?? "",
-            smsbranaPassword: (data as Record<string, unknown>).smsbrana_password as string ?? "",
           });
         }
         setCalendarConnected(calendarRes.connected ?? false);
@@ -157,27 +148,6 @@ function SettingsPageInner() {
   useEffect(() => {
     if (calendarStatus === "ok") setCalendarConnected(true);
   }, [calendarStatus]);
-
-  const testSms = async () => {
-    const login = form.getValues("smsbranaLogin");
-    const password = form.getValues("smsbranaPassword");
-    if (!login || !password || !smsTestPhone) return;
-    setSmsTesting(true);
-    setSmsTestResult(null);
-    try {
-      const res = await fetch("/api/test/sms", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login, password, phone: smsTestPhone }),
-      });
-      const data = await res.json().catch(() => ({}));
-      setSmsTestResult(res.ok ? { ok: true, text: "SMS odeslána!" } : { ok: false, text: data.error ?? "Chyba odesílání" });
-    } catch {
-      setSmsTestResult({ ok: false, text: "Síťová chyba" });
-    } finally {
-      setSmsTesting(false);
-    }
-  };
 
   const onSubmit = async (values: FormValues) => {
     if (!user?.id) return;
@@ -203,8 +173,6 @@ function SettingsPageInner() {
           whatsapp_phone: values.whatsappPhone || null,
           whatsapp_apikey: values.whatsappApikey || null,
           notification_email: values.notificationEmail || null,
-          smsbrana_login: values.smsbranaLogin || null,
-          smsbrana_password: values.smsbranaPassword || null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: "user_id" }
@@ -407,65 +375,6 @@ function SettingsPageInner() {
               {form.formState.errors.smsTemplate && (
                 <p className="text-sm text-destructive mt-1">
                   {form.formState.errors.smsTemplate.message}
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* SMSbrána.cz */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Send className="h-5 w-5" />
-              SMSbrána.cz
-            </CardTitle>
-            <CardDescription>
-              Přihlašovací údaje z účtu na smsbrana.cz pro odesílání SMS klientům.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="smsbranaLogin">Login</Label>
-              <Input
-                id="smsbranaLogin"
-                {...form.register("smsbranaLogin")}
-                placeholder="váš login"
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label htmlFor="smsbranaPassword">Heslo</Label>
-              <Input
-                id="smsbranaPassword"
-                type="password"
-                {...form.register("smsbranaPassword")}
-                placeholder="••••••••"
-                className="mt-1"
-              />
-            </div>
-            <div className="border-t border-border pt-4 space-y-2">
-              <Label>Testovací SMS</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={smsTestPhone}
-                  onChange={(e) => setSmsTestPhone(e.target.value)}
-                  placeholder="+420 777 123 456"
-                  className="max-w-[200px]"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={testSms}
-                  disabled={smsTesting || !form.watch("smsbranaLogin") || !form.watch("smsbranaPassword") || !smsTestPhone}
-                >
-                  {smsTesting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  Odeslat test
-                </Button>
-              </div>
-              {smsTestResult && (
-                <p className={`text-sm ${smsTestResult.ok ? "text-emerald-600" : "text-destructive"}`}>
-                  {smsTestResult.text}
                 </p>
               )}
             </div>
