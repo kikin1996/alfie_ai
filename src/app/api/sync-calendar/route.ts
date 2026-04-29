@@ -82,6 +82,13 @@ export async function POST() {
     });
 
     const items = events.items ?? [];
+
+    // Smazat všechny stávající prohlídky uživatele a načíst znovu
+    await supabaseAdmin
+      .from("viewings")
+      .delete()
+      .eq("user_id", session.user.id);
+
     for (const ev of items) {
       const start = ev.start?.dateTime ?? ev.start?.date;
       const end = ev.end?.dateTime ?? ev.end?.date;
@@ -122,50 +129,29 @@ export async function POST() {
       const nameCheck = isSuspiciousClientName(parsed.clientName);
       const clientName = nameCheck.fixedName ?? parsed.clientName;
 
-      // Zjistit, zda prohlídka již existuje
-      const { data: existing } = await supabaseAdmin
-        .from("viewings")
-        .select("id")
-        .eq("user_id", session.user.id)
-        .eq("calendar_event_id", ev.id)
-        .maybeSingle();
+      await supabaseAdmin.from("viewings").insert({
+        user_id: session.user.id,
+        calendar_event_id: ev.id,
+        address: parsed.address,
+        client_phone: parsed.clientPhone,
+        client_name: clientName,
+        event_start: parsed.start,
+        event_end: parsed.end,
+        sms2h_enabled: settings?.default_sms2h_enabled ?? true,
+        sms1h_enabled: settings?.default_sms1h_enabled ?? true,
+        vapi_enabled: settings?.default_vapi_enabled ?? true,
+        extra_notifications: ((settings?.default_extra_notifications ?? []) as { id: string; type: string; minutesBefore: number; label: string }[]).map((n) => ({
+          ...n,
+          id: crypto.randomUUID(),
+          sent: false,
+          enabled: true,
+        })),
+        updated_at: new Date().toISOString(),
+      });
 
-      if (existing) {
-        // Existuje – aktualizovat jen metadata, NEpřepisovat uživatelova nastavení notifikací
-        await supabaseAdmin.from("viewings").update({
-          address: parsed.address,
-          client_phone: parsed.clientPhone,
-          client_name: clientName,
-          event_start: parsed.start,
-          event_end: parsed.end,
-          updated_at: new Date().toISOString(),
-        }).eq("id", existing.id);
-      } else {
-        // Nová prohlídka – použít výchozí nastavení notifikací z user_settings
-        await supabaseAdmin.from("viewings").insert({
-          user_id: session.user.id,
-          calendar_event_id: ev.id,
-          address: parsed.address,
-          client_phone: parsed.clientPhone,
-          client_name: clientName,
-          event_start: parsed.start,
-          event_end: parsed.end,
-          sms2h_enabled: settings?.default_sms2h_enabled ?? true,
-          sms1h_enabled: settings?.default_sms1h_enabled ?? true,
-          vapi_enabled: settings?.default_vapi_enabled ?? true,
-          extra_notifications: ((settings?.default_extra_notifications ?? []) as { id: string; type: string; minutesBefore: number; label: string }[]).map((n) => ({
-            ...n,
-            id: crypto.randomUUID(),
-            sent: false,
-            enabled: true,
-          })),
-          updated_at: new Date().toISOString(),
-        });
-      }
       if (isMissingPhone(parsed.clientPhone)) {
         missingPhoneItems.push({ address: parsed.address, start: parsed.start });
       }
-      // Upozornit pouze na neopravitelné chyby (bez fixedName)
       if (nameCheck.suspicious && !nameCheck.fixedName) {
         suspiciousNameItems.push({ address: parsed.address, start: parsed.start, name: parsed.clientName, reason: nameCheck.reason ?? "" });
       }

@@ -31,6 +31,31 @@ import {
   History,
   Trash2,
 } from "lucide-react";
+
+function LiveClock() {
+  const [time, setTime] = useState<string>("");
+
+  useEffect(() => {
+    const tick = () =>
+      setTime(
+        new Date().toLocaleTimeString("cs-CZ", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        })
+      );
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-mono tabular-nums text-muted-foreground">
+      <Clock className="h-3.5 w-3.5" />
+      {time}
+    </div>
+  );
+}
 import Link from "next/link";
 
 const statusLabels: Record<ViewingStatus, string> = {
@@ -683,8 +708,8 @@ export default function DashboardPage() {
         type: "ok",
         text:
           data.synced === 0
-            ? "Žádné nové události s klíčovým slovem."
-            : `Načteno ${data.synced} prohlídek z kalendáře.`,
+            ? "Žádné události s klíčovým slovem – seznam byl vymazán."
+            : `Obnoveno ${data.synced} prohlídek z kalendáře.`,
       });
       await fetchViewings();
     } catch {
@@ -722,6 +747,7 @@ export default function DashboardPage() {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <LiveClock />
           {syncMessage && (
             <p
               className={
