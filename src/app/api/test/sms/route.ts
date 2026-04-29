@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
     login,
     password,
     phone,
-    "Alfie AI: testovací SMS – vše funguje správně! ✓"
+    "Renote: testovací SMS – vše funguje správně! ✓"
   ).catch((e: Error) => { throw e; });
 
   if (!sent) {

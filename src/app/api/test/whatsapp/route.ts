@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     await sendWhatsAppMessage(
       settings.whatsapp_phone,
       settings.whatsapp_apikey,
-      "✅ Testovací zpráva z Alfie AI – WhatsApp notifikace fungují správně!"
+      "✅ Testovací zpráva z Renote – WhatsApp notifikace fungují správně!"
     );
     return NextResponse.json({ ok: true });
   } catch (e) {

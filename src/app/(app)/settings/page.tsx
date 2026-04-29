@@ -230,11 +230,11 @@ function SettingsPageInner() {
               Google vám zobrazí varování <strong className="text-foreground">„Tato aplikace není ověřena"</strong>.
             </p>
             <p className="text-sm text-muted-foreground mb-3">
-              Aplikace <strong className="text-foreground">Alfie AI</strong> je v Beta fázi a aktuálně prochází procesem ověření ze strany Google. Vaše data jsou v bezpečí – přistupujeme pouze ke čtení vašich událostí v kalendáři.
+              Aplikace <strong className="text-foreground">Renote</strong> je v Beta fázi a aktuálně prochází procesem ověření ze strany Google. Vaše data jsou v bezpečí – přistupujeme pouze ke čtení vašich událostí v kalendáři.
             </p>
             <p className="text-sm text-muted-foreground mb-5">
               Klikněte na <strong className="text-foreground">„Pokročilé"</strong> a poté na{" "}
-              <strong className="text-foreground">„Přejít na alfie-ai (nezabezpečené)"</strong> pro dokončení propojení.
+              <strong className="text-foreground">„Přejít na renote (nezabezpečené)"</strong> pro dokončení propojení.
             </p>
             <div className="flex gap-2 justify-end">
               <Button type="button" variant="outline" onClick={() => setShowCalendarModal(false)}>
