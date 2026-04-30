@@ -1,3 +1,12 @@
+/** Normalizuje telefonní číslo do E.164 formátu (výchozí předvolba +420) */
+function toE164(phone: string, defaultCountry = "+420"): string {
+  let n = phone.replace(/[\s\-().]/g, "");
+  if (n.startsWith("00")) n = "+" + n.slice(2);
+  else if (n.startsWith("0")) n = defaultCountry + n.slice(1);
+  else if (!n.startsWith("+")) n = defaultCountry + n;
+  return n;
+}
+
 /**
  * VAPI.ai – spuštění odchozího telefonního hovoru
  */
@@ -26,7 +35,7 @@ export async function initiateVapiCall(opts: {
       assistantId: opts.assistantId,
       phoneNumberId: opts.phoneNumberId,
       customer: {
-        number: opts.number,
+        number: toE164(opts.number),
         name: opts.name,
       },
       metadata: {

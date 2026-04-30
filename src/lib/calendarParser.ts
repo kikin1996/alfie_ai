@@ -109,7 +109,7 @@ export function parseCalendarEvent(
   let clientPhone = telMatch ? normalizePhone(telMatch[1].trim()) : ""
   let address = adresaMatch ? adresaMatch[1].trim() : (location || "").trim()
 
-  // Fallback: title like "Jiří Novák, Adresa, 123 456 789, #prohlidka"
+  // Fallback: title like "Revoluční 2, Příbor, Petr Komárek, 777 726 001, #prohlidka"
   const keyword = triggerKeyword.trim().toLowerCase()
   const summaryParts = (summary || "")
     .split(",")
@@ -117,24 +117,35 @@ export function parseCalendarEvent(
     .filter(Boolean)
     .filter((p) => (keyword ? !p.toLowerCase().includes(keyword) : true))
 
-  if (!clientPhone || !address) {
-    // Phone = part with 9+ digits
-    const phonePart = summaryParts.find((p) => p.replace(/\D/g, "").length >= 9) || ""
-    if (!clientPhone && phonePart) clientPhone = normalizePhone(phonePart)
+  // Phone = part with 9+ digits
+  const phoneIdx = summaryParts.findIndex((p) => p.replace(/\D/g, "").length >= 9)
+  const phonePart = phoneIdx >= 0 ? summaryParts[phoneIdx] : ""
+  if (!clientPhone && phonePart) clientPhone = normalizePhone(phonePart)
 
-    if (!address) {
-      // Name = first part that doesn't look like a phone (< 6 digits)
-      const nonPhoneParts = summaryParts.filter((p) => p !== phonePart)
-      const namePart = nonPhoneParts.find((p) => p.replace(/\D/g, "").length < 6) || ""
-      // Address = parts that are neither name nor phone
-      const addressParts = nonPhoneParts.filter((p) => p !== namePart)
-      if (addressParts.length > 0) address = addressParts.join(", ")
+  // Name = part immediately before phone (format: [addr parts...], name, phone, keyword)
+  // Fallback when no phone: last part without digits, preferably 2+ words
+  let nameCandidate = ""
+  if (phoneIdx > 0) {
+    nameCandidate = summaryParts[phoneIdx - 1]
+  } else if (phoneIdx < 0) {
+    const noDigits = summaryParts.filter((p) => !/\d/.test(p))
+    nameCandidate = noDigits.find((p) => p.split(" ").length >= 2) || noDigits[noDigits.length - 1] || ""
+  }
+
+  if (!address) {
+    if (phoneIdx > 1) {
+      // Address = parts before the name candidate
+      address = summaryParts.slice(0, phoneIdx - 1).join(", ")
+    } else if (phoneIdx === 1 || phoneIdx === 0) {
+      // Only one part before phone — it's the address, not a name
+      address = summaryParts.slice(0, phoneIdx).join(", ")
+      if (!nameCandidate) nameCandidate = ""
+    } else {
+      // No phone in title
+      address = summaryParts.filter((p) => p !== nameCandidate).join(", ")
     }
   }
 
-  // Client name = first non-phone part of summary (not the full summary string)
-  const namePhonePart = summaryParts.find((p) => p.replace(/\D/g, "").length >= 9) || ""
-  const nameCandidate = summaryParts.filter((p) => p !== namePhonePart).find((p) => p.replace(/\D/g, "").length < 6)
   const clientName = nameCandidate || (summary || "").trim() || "Klient"
 
   if (!address && !clientPhone) return null

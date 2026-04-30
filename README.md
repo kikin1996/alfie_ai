@@ -83,3 +83,12 @@ Aby aplikace našla prohlídky a vytáhla telefon a adresu, používej v popisu/
 - **Google API:** Client ID a nastavení OAuth děláš v Google Cloud Console; Supabase pak použije svůj redirect pro Google provider.
 - **SMS brána:** Pro reálné SMS potřebuješ účet u Twilia; údaje vyplníš v Nastavení aplikace, odesílání běží v cronu.
 - **Formát události:** Doporuč makléřům jeden formát (např. `#prohlidka Tel: … Adresa: …`) v popisu nebo v názvu události.
+
+## Účty externích služeb
+
+| Služba | Účet |
+|--------|------|
+| [Resend](https://resend.com) (email notifikace) | kristian.karas@gypri.cz |
+| [cron-job.org](https://cron-job.org) (náhrada Vercel cron) | kristian.karas22@gmail.com |
+| [VAPI.ai](https://vapi.ai) (hlasové hovory) | kristian.karas22@gmail.com |
+| [SMSbrána.cz](https://smsbrana.cz) (SMS) | kristian.karas22@gmail.com |

@@ -9,7 +9,7 @@ export async function sendEmailNotification(
   if (!apiKey) return;
   const resend = new Resend(apiKey);
   await resend.emails.send({
-    from: "Renote <notifikace@notifications.renote.app>",
+    from: "Renote <onboarding@resend.dev>",
     to,
     subject,
     text,

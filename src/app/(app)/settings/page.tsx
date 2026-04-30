@@ -30,6 +30,8 @@ import {
   X,
   Plus,
   Trash2,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -72,6 +74,7 @@ function SettingsPageInner() {
   const [loaded, setLoaded] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveOk, setSaveOk] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
   const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [defaultExtras, setDefaultExtras] = useState<DefaultExtra[]>([]);
@@ -624,13 +627,22 @@ function SettingsPageInner() {
                 </div>
                 <div>
                   <Label htmlFor="whatsappApikey">CallMeBot API klíč</Label>
-                  <Input
-                    id="whatsappApikey"
-                    type="password"
-                    {...form.register("whatsappApikey")}
-                    placeholder="1234567"
-                    className="mt-1"
-                  />
+                  <div className="relative mt-1">
+                    <Input
+                      id="whatsappApikey"
+                      type={showApiKey ? "text" : "password"}
+                      {...form.register("whatsappApikey")}
+                      placeholder="1234567"
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowApiKey((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
