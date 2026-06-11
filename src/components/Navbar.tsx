@@ -9,7 +9,6 @@ import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { label: "AI Volání", icon: Phone, path: "/ai-call" },
   { label: "Předplatné", icon: CreditCard, path: "/subscription" },
   { label: "Nastavení", icon: Settings, path: "/settings" },
 ];
