@@ -145,7 +145,7 @@ export async function GET(request: NextRequest) {
     const endHour = parseHour(userSettings?.notification_time_to ?? "18:00");
 
     // Okno 2h — 1 kredit
-    if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, getEffectiveTime(eventStart, 120, startHour, endHour), 20) && hasSms) {
+    if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, getEffectiveTime(eventStart, 120, startHour, endHour), 7) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
         const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone);
@@ -161,7 +161,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Okno 1h — 1 kredit
-    if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, getEffectiveTime(eventStart, 60, startHour, endHour), 20) && hasSms) {
+    if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, getEffectiveTime(eventStart, 60, startHour, endHour), 7) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
         const body = fillTemplate("Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.", v.address, timeStr, name, brokerName, brokerPhone);
@@ -177,7 +177,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Okno VAPI hovoru — 5 kreditů
-    if (!v.vapi_called && v.vapi_enabled && isInWindow(now, getEffectiveTime(eventStart, vapiMinutesBefore, startHour, endHour), 10) && hasVapi) {
+    if (!v.vapi_called && v.vapi_enabled && isInWindow(now, getEffectiveTime(eventStart, vapiMinutesBefore, startHour, endHour), 7) && hasVapi) {
       const hasCredits = await deductCredits(v.user_id, 5);
       if (hasCredits) {
         const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
@@ -200,7 +200,7 @@ export async function GET(request: NextRequest) {
       const notif = updatedExtras[i];
       if (notif.sent || !notif.enabled) continue;
 
-      if (!isInWindow(now, getEffectiveTime(eventStart, notif.minutesBefore, startHour, endHour), 20)) continue;
+      if (!isInWindow(now, getEffectiveTime(eventStart, notif.minutesBefore, startHour, endHour), 7)) continue;
 
       if (notif.type === "sms" && hasSms) {
         const hasCredits = await deductCredits(v.user_id, 1);
