@@ -5,8 +5,6 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { parseCalendarEvent, eventMatchesTrigger, normalizePhone, isSuspiciousClientName } from "@/lib/calendarParser";
 import { geminiParseEvent } from "@/lib/geminiParseEvent";
 import { notify } from "@/lib/notify";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
 
 function isMissingPhone(phone: string | null | undefined): boolean {
   if (!phone) return true;
@@ -192,7 +190,7 @@ export async function POST() {
   // Upozornění na chybějící telefonní čísla
   if (missingPhoneItems.length > 0 && settings) {
     const list = missingPhoneItems
-      .map((v) => `• ${v.address} (${format(new Date(v.start), "d.M. HH:mm", { locale: cs })})`)
+      .map((v) => `• ${v.address} (${new Date(v.start).toLocaleString("cs-CZ", { timeZone: "Europe/Prague", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })})`)
       .join("\n");
     await notify(
       settings,
@@ -204,7 +202,7 @@ export async function POST() {
   // Upozornění na podezřelá jména klientů
   if (suspiciousNameItems.length > 0 && settings) {
     const list = suspiciousNameItems
-      .map((v) => `• „${v.name}" – ${v.reason}\n  ${v.address} (${format(new Date(v.start), "d.M. HH:mm", { locale: cs })})`)
+      .map((v) => `• „${v.name}" – ${v.reason}\n  ${v.address} (${new Date(v.start).toLocaleString("cs-CZ", { timeZone: "Europe/Prague", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })})`)
       .join("\n");
     await notify(settings, `⚠️ Zkontrolujte jména klientů (${suspiciousNameItems.length})`, `⚠️ U těchto prohlídek vypadá jméno klienta podezřele – zkontrolujte prosím v kalendáři:\n\n${list}`).catch(() => {});
   }

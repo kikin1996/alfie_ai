@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
     if (!settings) continue;
 
     const list = viewingList
-      .map((v) => `• ${v.address} (${format(new Date(v.event_start), "EEEE d.M. HH:mm", { locale: cs })})`)
+      .map((v) => `• ${v.address} (${new Date(v.event_start).toLocaleString("cs-CZ", { timeZone: "Europe/Prague", weekday: "long", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })})`)
       .join("\n");
 
     await notify(

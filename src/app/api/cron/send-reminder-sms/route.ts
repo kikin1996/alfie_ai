@@ -3,8 +3,6 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendSms } from "@/lib/smsbrana";
 import { notify } from "@/lib/notify";
 import { initiateVapiCall } from "@/lib/vapi";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
 import type { ExtraNotification } from "@/types";
 
 function checkCronAuth(request: NextRequest): boolean {
@@ -134,7 +132,7 @@ export async function GET(request: NextRequest) {
     const userSettings = settingsByUser.get(v.user_id);
 
     const eventStart = new Date(v.event_start);
-    const timeStr = format(eventStart, "HH:mm", { locale: cs });
+    const timeStr = eventStart.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
     const name = v.client_name || "Klient";
     const template = userSettings?.sms_template ??
       "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";

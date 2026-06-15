@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendSms } from "@/lib/smsbrana";
 import { initiateVapiCall } from "@/lib/vapi";
-import { format } from "date-fns";
-import { cs } from "date-fns/locale";
 
 function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string) {
   return template
@@ -67,7 +65,7 @@ export async function POST(
   const vapiPhoneNumberId = userSettings?.vapi_phone_number_id || appConfig?.vapi_phone_number_id;
 
   const eventStart = new Date(viewing.event_start);
-  const timeStr = format(eventStart, "HH:mm", { locale: cs });
+  const timeStr = eventStart.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
   const name = viewing.client_name || "Klient";
 
   if (action === "sms") {
