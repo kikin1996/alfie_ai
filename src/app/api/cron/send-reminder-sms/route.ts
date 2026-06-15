@@ -44,13 +44,14 @@ function isInWindow(now: Date, effectiveTime: Date, windowMinutes: number): bool
   return Math.abs(now.getTime() - effectiveTime.getTime()) / 60000 <= windowMinutes;
 }
 
-function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string): string {
+function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string, agencyName: string = ""): string {
   return template
     .replace(/\{address\}/g, address)
     .replace(/\{time\}/g, time)
     .replace(/\{clientName\}/g, clientName)
     .replace(/\{brokerName\}/g, brokerName)
-    .replace(/\{brokerPhone\}/g, brokerPhone);
+    .replace(/\{brokerPhone\}/g, brokerPhone)
+    .replace(/\{agencyName\}/g, agencyName);
 }
 
 export async function GET(request: NextRequest) {
@@ -134,8 +135,9 @@ export async function GET(request: NextRequest) {
     const eventStart = new Date(v.event_start);
     const timeStr = eventStart.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
     const name = v.client_name || "Klient";
+    const agencyName = userSettings?.agency_name ?? "";
     const template = userSettings?.sms_template ??
-      "Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte ANO pro potvrzení nebo NE pro zrušení.";
+      "Dobrý den, připomínáme prohlídku na adrese {address} v {time}. Prosím potvrďte, zda přijdete. Děkujeme, {agencyName}";
     const brokerName = userSettings?.broker_name ?? "";
     const brokerPhone = userSettings?.broker_phone ?? "";
 
@@ -146,7 +148,7 @@ export async function GET(request: NextRequest) {
     if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, getEffectiveTime(eventStart, 120, startHour, endHour), 7) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
-        const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone);
+        const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName);
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
           await supabaseAdmin.from("viewings").update({ sms2h_sent: true, status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
@@ -162,7 +164,7 @@ export async function GET(request: NextRequest) {
     if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, getEffectiveTime(eventStart, 60, startHour, endHour), 7) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
-        const body = fillTemplate("Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.", v.address, timeStr, name, brokerName, brokerPhone);
+        const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName);
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
           await supabaseAdmin.from("viewings").update({ sms1h_sent: true, updated_at: now.toISOString() }).eq("id", v.id);
@@ -203,7 +205,7 @@ export async function GET(request: NextRequest) {
       if (notif.type === "sms" && hasSms) {
         const hasCredits = await deductCredits(v.user_id, 1);
         if (hasCredits) {
-          const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone);
+          const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
             updatedExtras[i] = { ...notif, sent: true };

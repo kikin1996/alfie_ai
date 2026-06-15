@@ -44,7 +44,7 @@ export default function HistoryPage() {
       .from("viewings")
       .select("*")
       .eq("user_id", user.id)
-      .lt("event_start", startOfToday.toISOString())
+      .or(`event_start.lt.${startOfToday.toISOString()},status.eq.cancelled`)
       .order("event_start", { ascending: false });
 
     const rows = (data as Record<string, unknown>[]) ?? [];
