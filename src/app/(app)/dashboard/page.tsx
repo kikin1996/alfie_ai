@@ -474,7 +474,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
             {viewing.status === "cancelled" && (
               <p className="text-destructive font-medium">✕ Klient zrušil prohlídku</p>
             )}
-            {(viewing.sms2hSent || viewing.sms1hSent) && smsSettings && (() => {
+            {(viewing.sms2hSent || viewing.sms1hSent || viewing.status === "cancelled" || viewing.status === "confirmed") && smsSettings && (() => {
               const timeStr = new Date(viewing.eventStart).toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
               const text = smsSettings.smsTemplate
                 .replace(/\{address\}/g, viewing.address || "")

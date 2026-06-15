@@ -26,10 +26,31 @@ const statusVariant: Record<ViewingStatus, "pending" | "sms_sent" | "confirmed" 
   cancelled: "cancelled",
 };
 
+type SmsSettings = {
+  smsTemplate: string;
+  brokerName: string;
+  brokerPhone: string;
+  agencyName: string;
+};
+
+function buildSmsText(v: Viewing, s: SmsSettings): string {
+  const timeStr = new Date(v.eventStart).toLocaleTimeString("cs-CZ", {
+    timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit",
+  });
+  return s.smsTemplate
+    .replace(/\{address\}/g, v.address || "")
+    .replace(/\{time\}/g, timeStr)
+    .replace(/\{clientName\}/g, v.clientName || "Klient")
+    .replace(/\{brokerName\}/g, s.brokerName)
+    .replace(/\{brokerPhone\}/g, s.brokerPhone)
+    .replace(/\{agencyName\}/g, s.agencyName);
+}
+
 export default function HistoryPage() {
   const { user, loading: authLoading } = useAuth();
   const [viewings, setViewings] = useState<Viewing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [smsSettings, setSmsSettings] = useState<SmsSettings | null>(null);
   const supabase = createClient();
 
   const fetchHistory = useCallback(async () => {
@@ -79,6 +100,25 @@ export default function HistoryPage() {
     fetchHistory();
   }, [fetchHistory]);
 
+  useEffect(() => {
+    if (!user?.id || !isSupabaseConfigured()) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("sms_template, broker_name, broker_phone, agency_name")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (data) setSmsSettings({
+          smsTemplate: data.sms_template || "Dobrý den, připomínáme prohlídku na adrese {address} v {time}. Prosím potvrďte, zda přijdete. Děkujeme, {agencyName}",
+          brokerName: data.broker_name || "",
+          brokerPhone: data.broker_phone || "",
+          agencyName: data.agency_name || "",
+        });
+      } catch { /* ignore */ }
+    })();
+  }, [user?.id, supabase]);
+
   return (
     <div className="p-6">
       <div className="flex items-center gap-3 mb-6">
@@ -107,6 +147,7 @@ export default function HistoryPage() {
         <div className="grid gap-3">
           {viewings.map((v) => {
             const start = new Date(v.eventStart);
+            const smsSent = v.sms2hSent || v.sms1hSent || v.status === "cancelled" || v.status === "confirmed";
             return (
               <Card key={v.id} className="border-navy/10 opacity-80">
                 <CardHeader className="pb-2">
@@ -120,8 +161,23 @@ export default function HistoryPage() {
                 <CardContent className="text-sm text-muted-foreground space-y-1.5">
                   <p><span className="font-medium text-foreground">Adresa:</span> {v.address || "—"}</p>
                   <p><span className="font-medium text-foreground">Datum:</span> {format(start, "d. M. yyyy", { locale: cs })}</p>
-                  <p><span className="font-medium text-foreground">Čas:</span> {format(start, "HH:mm", { locale: cs })}</p>
+                  <p><span className="font-medium text-foreground">Čas:</span> {start.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" })}</p>
                   {v.clientPhone && <p><span className="font-medium text-foreground">Tel.:</span> {v.clientPhone}</p>}
+                  {v.status === "confirmed" && (
+                    <p className="text-emerald-600 font-medium">
+                      ✓ Potvrzeno po{" "}
+                      {v.vapiCalled ? "hovoru" : v.sms1hSent ? "SMS 1h" : v.sms2hSent ? "SMS 2h" : "SMS"}
+                    </p>
+                  )}
+                  {v.status === "cancelled" && (
+                    <p className="text-destructive font-medium">✕ Klient odmítl schůzku</p>
+                  )}
+                  {smsSent && smsSettings && (
+                    <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">
+                      <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Text odeslané SMS:</p>
+                      <p>{buildSmsText(v, smsSettings)}</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             );
