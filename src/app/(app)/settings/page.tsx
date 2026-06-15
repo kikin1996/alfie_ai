@@ -94,7 +94,7 @@ function SettingsPageInner() {
       brokerName: "",
       brokerPhone: "",
       agencyName: "",
-      triggerKeyword: "#prohlidka",
+      triggerKeyword: "prohlídka",
       smsTemplate: defaultTemplate,
       notificationTimeFrom: "08:00",
       notificationTimeTo: "18:00",
@@ -131,7 +131,7 @@ function SettingsPageInner() {
             brokerName: data.broker_name ?? "",
             brokerPhone: data.broker_phone ?? "",
             agencyName: data.agency_name ?? "",
-            triggerKeyword: data.trigger_keyword ?? "#prohlidka",
+            triggerKeyword: data.trigger_keyword ?? "prohlídka",
             smsTemplate: data.sms_template ?? defaultTemplate,
             notificationTimeFrom: data.notification_time_from ?? "08:00",
             notificationTimeTo: data.notification_time_to ?? "18:00",
@@ -345,12 +345,12 @@ function SettingsPageInner() {
             </div>
             <div>
               <Label htmlFor="triggerKeyword">
-                Klíčové slovo (např. #prohlidka)
+                Klíčové slovo (např. prohlídka)
               </Label>
               <Input
                 id="triggerKeyword"
                 {...form.register("triggerKeyword")}
-                placeholder="#prohlidka"
+                placeholder="prohlídka"
                 className="mt-1"
               />
               {form.formState.errors.triggerKeyword && (

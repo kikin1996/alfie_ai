@@ -262,7 +262,12 @@ function AddNotifPanel({ onAdd, onClose }: AddNotifPanelProps) {
 // ViewingCard – stateful karta prohlídky
 // ---------------------------------------------------------------------------
 
-function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; isAdmin: boolean; isPast?: boolean }) {
+function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
+  viewing: Viewing;
+  isAdmin: boolean;
+  isPast?: boolean;
+  smsSettings?: { smsTemplate: string; brokerName: string; brokerPhone: string; agencyName: string } | null;
+}) {
   const [viewing, setViewing] = useState<Viewing>(initial);
   const [addingNotif, setAddingNotif] = useState(false);
   const [triggerState, setTriggerState] = useState<Record<string, "idle" | "busy" | "ok" | "err">>({});
@@ -466,6 +471,25 @@ function ViewingCard({ viewing: initial, isAdmin, isPast }: { viewing: Viewing; 
                 {viewing.vapiCalled ? "hovoru 30min" : viewing.sms1hSent ? "SMS 1h" : viewing.sms2hSent ? "SMS 2h" : "SMS"}
               </p>
             )}
+            {viewing.status === "cancelled" && (
+              <p className="text-destructive font-medium">✕ Klient zrušil prohlídku</p>
+            )}
+            {(viewing.sms2hSent || viewing.sms1hSent) && smsSettings && (() => {
+              const timeStr = new Date(viewing.eventStart).toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
+              const text = smsSettings.smsTemplate
+                .replace(/\{address\}/g, viewing.address || "")
+                .replace(/\{time\}/g, timeStr)
+                .replace(/\{clientName\}/g, viewing.clientName || "Klient")
+                .replace(/\{brokerName\}/g, smsSettings.brokerName)
+                .replace(/\{brokerPhone\}/g, smsSettings.brokerPhone)
+                .replace(/\{agencyName\}/g, smsSettings.agencyName);
+              return (
+                <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">
+                  <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Text odeslané SMS:</p>
+                  <p>{text}</p>
+                </div>
+              );
+            })()}
           </>
         )}
 
@@ -631,6 +655,7 @@ export default function DashboardPage() {
   const [syncMessage, setSyncMessage] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [credits, setCredits] = useState<number | null>(null);
   const [hasSubscription, setHasSubscription] = useState<boolean | null>(null);
+  const [smsSettings, setSmsSettings] = useState<{ smsTemplate: string; brokerName: string; brokerPhone: string; agencyName: string } | null>(null);
   const supabase = createClient();
 
   const fetchViewings = useCallback(async () => {
@@ -678,6 +703,24 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchViewings();
   }, [fetchViewings]);
+
+  useEffect(() => {
+    if (!user?.id || !isSupabaseConfigured()) return;
+    supabase
+      .from("user_settings")
+      .select("sms_template, broker_name, broker_phone, agency_name")
+      .eq("user_id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setSmsSettings({
+          smsTemplate: data.sms_template || "Dobrý den, připomínáme prohlídku na adrese {address} v {time}. Prosím potvrďte, zda přijdete. Děkujeme, {agencyName}",
+          brokerName: data.broker_name || "",
+          brokerPhone: data.broker_phone || "",
+          agencyName: data.agency_name || "",
+        });
+      })
+      .catch(() => {});
+  }, [user?.id, supabase]);
 
   useEffect(() => {
     if (!user) return;
@@ -855,10 +898,10 @@ export default function DashboardPage() {
           Název události pište v tomto pořadí, oddělené čárkami:
         </p>
         <code className="block rounded-md bg-card border border-border px-3 py-2 text-sm font-mono text-foreground mb-2">
-          Jméno klienta, Ulice, Město, +420XXXXXXXXX, #prohlidka
+          Jméno klienta, Ulice, Město, +420XXXXXXXXX, prohlídka
         </code>
         <p className="text-xs text-muted-foreground">
-          Příklad: <span className="font-mono">Jan Novák, Revoluční 12, Ostrava, +420777123456, #prohlidka</span>
+          Příklad: <span className="font-mono">Jan Novák, Revoluční 12, Ostrava, +420777123456, prohlídka</span>
         </p>
       </div>
 
@@ -866,7 +909,7 @@ export default function DashboardPage() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             Zatím nemáte žádné prohlídky. Přidejte do Google Kalendáře události ve formátu{" "}
-            <span className="font-mono text-foreground">Jméno, Ulice, Město, Tel, #prohlidka</span>{" "}
+            <span className="font-mono text-foreground">Jméno, Ulice, Město, Tel, prohlídka</span>{" "}
             a klikněte na „Aktualizovat události".
           </CardContent>
         </Card>
@@ -879,7 +922,7 @@ export default function DashboardPage() {
               <h2 className="text-lg font-medium text-navy mb-3">Nadcházející</h2>
               <div className="grid gap-3">
                 {upcoming.map((v) => (
-                  <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} />
+                  <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} smsSettings={smsSettings} />
                 ))}
               </div>
             </section>
