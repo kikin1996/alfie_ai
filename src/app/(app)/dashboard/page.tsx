@@ -706,20 +706,21 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!user?.id || !isSupabaseConfigured()) return;
-    supabase
-      .from("user_settings")
-      .select("sms_template, broker_name, broker_phone, agency_name")
-      .eq("user_id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("user_settings")
+          .select("sms_template, broker_name, broker_phone, agency_name")
+          .eq("user_id", user.id)
+          .maybeSingle();
         if (data) setSmsSettings({
           smsTemplate: data.sms_template || "Dobrý den, připomínáme prohlídku na adrese {address} v {time}. Prosím potvrďte, zda přijdete. Děkujeme, {agencyName}",
           brokerName: data.broker_name || "",
           brokerPhone: data.broker_phone || "",
           agencyName: data.agency_name || "",
         });
-      })
-      .catch(() => {});
+      } catch { /* ignore */ }
+    })();
   }, [user?.id, supabase]);
 
   useEffect(() => {
