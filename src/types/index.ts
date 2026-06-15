@@ -23,6 +23,9 @@ export interface Viewing {
   sms2hSent: boolean
   sms1hSent: boolean
   vapiCalled: boolean
+  vapiCallId?: string
+  vapiSummary?: string
+  vapiTranscript?: string
   sms2hEnabled: boolean
   sms1hEnabled: boolean
   vapiEnabled: boolean

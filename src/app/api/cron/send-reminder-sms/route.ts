@@ -182,7 +182,7 @@ export async function GET(request: NextRequest) {
       if (hasCredits) {
         const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
         if (callId) {
-          await supabaseAdmin.from("viewings").update({ vapi_called: true, updated_at: now.toISOString() }).eq("id", v.id);
+          await supabaseAdmin.from("viewings").update({ vapi_called: true, vapi_call_id: callId, updated_at: now.toISOString() }).eq("id", v.id);
           if (userSettings) await notify(userSettings, `VAPI hovor spuštěn – ${name}`, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);
           actions++;
         }
@@ -219,6 +219,7 @@ export async function GET(request: NextRequest) {
         if (hasCredits) {
           const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: notif.minutesBefore }).catch(() => null);
           if (callId) {
+            await supabaseAdmin.from("viewings").update({ vapi_call_id: callId }).eq("id", v.id);
             updatedExtras[i] = { ...notif, sent: true };
             extrasUpdated = true;
             if (userSettings) await notify(userSettings, `${notif.label} hovor spuštěn – ${name}`, `📞 ${notif.label} hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);

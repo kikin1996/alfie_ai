@@ -26,6 +26,62 @@ const statusVariant: Record<ViewingStatus, "pending" | "sms_sent" | "confirmed" 
   cancelled: "cancelled",
 };
 
+function CallResultBox({ viewingId, callId, initialSummary, initialTranscript }: {
+  viewingId: string;
+  callId?: string;
+  initialSummary?: string;
+  initialTranscript?: string;
+}) {
+  const [result, setResult] = useState<{ summary: string | null; transcript: string | null } | null>(
+    initialSummary || initialTranscript ? { summary: initialSummary ?? null, transcript: initialTranscript ?? null } : null
+  );
+  const [loading, setLoading] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
+
+  if (!callId && !result) return null;
+
+  return (
+    <div className="mt-0.5 rounded-md bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-xs border border-blue-200 dark:border-blue-800">
+      <p className="font-semibold text-blue-700 dark:text-blue-300 text-[10px] uppercase tracking-wide mb-1">Výsledek hovoru:</p>
+      {!result && !loading && (
+        <button
+          onClick={async () => {
+            setLoading(true);
+            try {
+              const r = await fetch(`/api/viewings/${viewingId}/call-result`);
+              if (r.ok) setResult(await r.json());
+            } finally { setLoading(false); }
+          }}
+          className="text-blue-600 underline text-xs"
+        >
+          Načíst shrnutí a přepis
+        </button>
+      )}
+      {loading && <span className="text-muted-foreground">Načítám…</span>}
+      {result && (
+        <div className="space-y-1">
+          {result.summary && <p className="text-foreground">{result.summary}</p>}
+          {result.transcript && (
+            <>
+              <button onClick={() => setShowTranscript(v => !v)} className="text-blue-600 underline text-xs mt-1">
+                {showTranscript ? "Skrýt přepis" : "Zobrazit přepis hovoru"}
+              </button>
+              {showTranscript && (
+                <pre className="mt-1 whitespace-pre-wrap text-muted-foreground font-sans text-[11px] leading-relaxed border-t border-blue-200 pt-1">
+                  {result.transcript}
+                </pre>
+              )}
+            </>
+          )}
+          {!result.summary && !result.transcript && (
+            <p className="text-muted-foreground">Shrnutí zatím není k dispozici.</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 type SmsSettings = {
   smsTemplate: string;
   brokerName: string;
@@ -84,6 +140,9 @@ export default function HistoryPage() {
         sms2hSent: (r.sms2h_sent as boolean) ?? false,
         sms1hSent: (r.sms1h_sent as boolean) ?? false,
         vapiCalled: (r.vapi_called as boolean) ?? false,
+        vapiCallId: (r.vapi_call_id as string) ?? undefined,
+        vapiSummary: (r.vapi_summary as string) ?? undefined,
+        vapiTranscript: (r.vapi_transcript as string) ?? undefined,
         sms2hEnabled: (r.sms2h_enabled as boolean) ?? true,
         sms1hEnabled: (r.sms1h_enabled as boolean) ?? true,
         vapiEnabled: (r.vapi_enabled as boolean) ?? true,
@@ -171,6 +230,14 @@ export default function HistoryPage() {
                   )}
                   {v.status === "cancelled" && (
                     <p className="text-destructive font-medium">✕ Klient odmítl schůzku</p>
+                  )}
+                  {v.vapiCalled && (v.vapiCallId || v.vapiSummary || v.vapiTranscript) && (
+                    <CallResultBox
+                      viewingId={v.id}
+                      callId={v.vapiCallId}
+                      initialSummary={v.vapiSummary}
+                      initialTranscript={v.vapiTranscript}
+                    />
                   )}
                   {smsSent && smsSettings && (
                     <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">

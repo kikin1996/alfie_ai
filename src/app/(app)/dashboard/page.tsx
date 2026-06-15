@@ -278,6 +278,13 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [removed, setRemoved] = useState(false);
+  const [callResult, setCallResult] = useState<{ summary: string | null; transcript: string | null } | null>(
+    viewing.vapiSummary || viewing.vapiTranscript
+      ? { summary: viewing.vapiSummary ?? null, transcript: viewing.vapiTranscript ?? null }
+      : null
+  );
+  const [loadingCall, setLoadingCall] = useState(false);
+  const [showTranscript, setShowTranscript] = useState(false);
 
   const saveEdit = async () => {
     setSaving(true);
@@ -473,6 +480,49 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
             )}
             {viewing.status === "cancelled" && (
               <p className="text-destructive font-medium">✕ Klient zrušil prohlídku</p>
+            )}
+            {viewing.vapiCalled && (viewing.vapiCallId || callResult) && (
+              <div className="mt-0.5 rounded-md bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-xs border border-blue-200 dark:border-blue-800">
+                <p className="font-semibold text-blue-700 dark:text-blue-300 text-[10px] uppercase tracking-wide mb-1">Výsledek hovoru:</p>
+                {!callResult && !loadingCall && (
+                  <button
+                    onClick={async () => {
+                      setLoadingCall(true);
+                      try {
+                        const r = await fetch(`/api/viewings/${viewing.id}/call-result`);
+                        if (r.ok) setCallResult(await r.json());
+                      } finally { setLoadingCall(false); }
+                    }}
+                    className="text-blue-600 underline text-xs"
+                  >
+                    Načíst shrnutí a přepis
+                  </button>
+                )}
+                {loadingCall && <span className="text-muted-foreground">Načítám…</span>}
+                {callResult && (
+                  <div className="space-y-1">
+                    {callResult.summary && <p className="text-foreground">{callResult.summary}</p>}
+                    {callResult.transcript && (
+                      <>
+                        <button
+                          onClick={() => setShowTranscript(v => !v)}
+                          className="text-blue-600 underline text-xs mt-1"
+                        >
+                          {showTranscript ? "Skrýt přepis" : "Zobrazit přepis hovoru"}
+                        </button>
+                        {showTranscript && (
+                          <pre className="mt-1 whitespace-pre-wrap text-muted-foreground font-sans text-[11px] leading-relaxed border-t border-blue-200 pt-1">
+                            {callResult.transcript}
+                          </pre>
+                        )}
+                      </>
+                    )}
+                    {!callResult.summary && !callResult.transcript && (
+                      <p className="text-muted-foreground">Shrnutí zatím není k dispozici.</p>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
             {(viewing.sms2hSent || viewing.sms1hSent || viewing.status === "cancelled" || viewing.status === "confirmed") && smsSettings && (() => {
               const timeStr = new Date(viewing.eventStart).toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
@@ -688,6 +738,9 @@ export default function DashboardPage() {
         sms2hSent: (r.sms2h_sent as boolean) ?? false,
         sms1hSent: (r.sms1h_sent as boolean) ?? false,
         vapiCalled: (r.vapi_called as boolean) ?? false,
+        vapiCallId: (r.vapi_call_id as string) ?? undefined,
+        vapiSummary: (r.vapi_summary as string) ?? undefined,
+        vapiTranscript: (r.vapi_transcript as string) ?? undefined,
         sms2hEnabled: (r.sms2h_enabled as boolean) ?? true,
         sms1hEnabled: (r.sms1h_enabled as boolean) ?? true,
         vapiEnabled: (r.vapi_enabled as boolean) ?? true,
