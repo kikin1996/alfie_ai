@@ -848,12 +848,26 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Pokyny pro formát události v Google Kalendáři */}
+      <div className="mb-4 rounded-xl border border-border bg-muted/40 px-5 py-4">
+        <p className="text-sm font-semibold text-foreground mb-1.5">Jak přidat prohlídku do Google Kalendáře</p>
+        <p className="text-sm text-muted-foreground mb-2">
+          Název události pište v tomto pořadí, oddělené čárkami:
+        </p>
+        <code className="block rounded-md bg-card border border-border px-3 py-2 text-sm font-mono text-foreground mb-2">
+          Jméno klienta, Ulice, Město, +420XXXXXXXXX, #prohlidka
+        </code>
+        <p className="text-xs text-muted-foreground">
+          Příklad: <span className="font-mono">Jan Novák, Revoluční 12, Ostrava, +420777123456, #prohlidka</span>
+        </p>
+      </div>
+
       {viewings.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
-            Zatím nemáte žádné prohlídky. Přidejte do Google Kalendáře události s klíčovým
-            slovem (např. #prohlidka) a formátem: Tel: +420… Adresa: … Poté klikněte na
-            „Aktualizovat události".
+            Zatím nemáte žádné prohlídky. Přidejte do Google Kalendáře události ve formátu{" "}
+            <span className="font-mono text-foreground">Jméno, Ulice, Město, Tel, #prohlidka</span>{" "}
+            a klikněte na „Aktualizovat události".
           </CardContent>
         </Card>
       ) : viewMode === "calendar" ? (

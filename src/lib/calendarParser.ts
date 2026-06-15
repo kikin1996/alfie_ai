@@ -31,6 +31,17 @@ function toTitleCase(s: string): string {
   return s.split(" ").map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ")
 }
 
+/** Skóre jak moc string vypadá jako osobní jméno (2 slova, bez číslic, Title Case) */
+function nameScore(s: string): number {
+  const words = s.split(" ").filter(Boolean)
+  let score = 0
+  if (words.length >= 2) score += 10
+  if (!/\d/.test(s)) score += 5
+  if (words.every(w => /^[A-ZÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/u.test(w))) score += 5
+  if (s.length >= 4 && s.length <= 35) score += 3
+  return score
+}
+
 /**
  * Zkontroluje jméno klienta.
  * - suspicious: true + fixedName → drobná chyba, oprav automaticky
@@ -122,27 +133,31 @@ export function parseCalendarEvent(
   const phonePart = phoneIdx >= 0 ? summaryParts[phoneIdx] : ""
   if (!clientPhone && phonePart) clientPhone = normalizePhone(phonePart)
 
-  // Name = part immediately before phone (format: [addr parts...], name, phone, keyword)
-  // Fallback when no phone: last part without digits, preferably 2+ words
+  // Formát: Jméno, Ulice, Město, Telefon, #klíčové slovo
+  // První díl je jméno, díly před telefonem (bez prvního) jsou adresa.
+  // Pokud první díl skóruje méně než poslední před telefonem, použij původní logiku (zpětná kompatibilita).
   let nameCandidate = ""
-  if (phoneIdx > 0) {
-    nameCandidate = summaryParts[phoneIdx - 1]
-  } else if (phoneIdx < 0) {
+  if (phoneIdx < 0) {
+    // Bez telefonu: hledej 2-slovný díl bez číslic jako jméno
     const noDigits = summaryParts.filter((p) => !/\d/.test(p))
     nameCandidate = noDigits.find((p) => p.split(" ").length >= 2) || noDigits[noDigits.length - 1] || ""
+  } else {
+    const nonPhoneParts = summaryParts.slice(0, phoneIdx)
+    if (nonPhoneParts.length >= 2) {
+      const first = nonPhoneParts[0]
+      const last = nonPhoneParts[nonPhoneParts.length - 1]
+      // Preferuj první díl jako jméno pokud skóruje alespoň stejně — formát: Jméno, Ulice, Město, Tel
+      nameCandidate = nameScore(first) >= nameScore(last) ? first : last
+    }
+    // 0 nebo 1 díl před telefonem → jméno neurčeno, celé je adresa
   }
 
   if (!address) {
-    if (phoneIdx > 1) {
-      // Address = parts before the name candidate
-      address = summaryParts.slice(0, phoneIdx - 1).join(", ")
-    } else if (phoneIdx === 1 || phoneIdx === 0) {
-      // Only one part before phone — it's the address, not a name
-      address = summaryParts.slice(0, phoneIdx).join(", ")
-      if (!nameCandidate) nameCandidate = ""
-    } else {
-      // No phone in title
+    if (phoneIdx < 0) {
       address = summaryParts.filter((p) => p !== nameCandidate).join(", ")
+    } else {
+      const nonPhoneParts = summaryParts.slice(0, phoneIdx)
+      address = nonPhoneParts.filter((p) => p !== nameCandidate).join(", ")
     }
   }
 
