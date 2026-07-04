@@ -89,13 +89,27 @@ export async function GET(request: NextRequest) {
   }
 
   // Načíst Telegram + SMS šablonu per-user
+  // POZOR: jen sloupce, které jistě existují – ať dotaz nikdy neselže a nezablokuje notifikace.
   const userIds = [...new Set(viewings.map((v) => v.user_id))];
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, sms_template, notification_window_enabled, notification_time_from, notification_time_to, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
+    .select("user_id, sms_template, notification_time_from, notification_time_to, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
     .in("user_id", userIds);
 
   const settingsByUser = new Map((settingsList ?? []).map((s) => [s.user_id, s]));
+
+  // Přepínač časového okna – samostatný tolerantní dotaz (sloupec nemusí existovat,
+  // pokud neproběhla migrace 016). Když chybí/selže → default true (okno zapnuté).
+  const windowByUser = new Map<string, boolean>();
+  {
+    const { data: winList } = await supabaseAdmin
+      .from("user_settings")
+      .select("user_id, notification_window_enabled")
+      .in("user_id", userIds);
+    for (const w of (winList ?? []) as { user_id: string; notification_window_enabled: boolean | null }[]) {
+      windowByUser.set(w.user_id, w.notification_window_enabled ?? true);
+    }
+  }
 
   // Načíst předplatná uživatelů
   const { data: subscriptionsList } = await supabaseAdmin
@@ -146,7 +160,7 @@ export async function GET(request: NextRequest) {
     const startHour = parseHour(userSettings?.notification_time_from ?? "08:00");
     const endHour = parseHour(userSettings?.notification_time_to ?? "18:00");
     // Když je časové okno vypnuté, notifikace jdou v přirozeném čase (bez mrtvé zóny).
-    const windowEnabled = userSettings?.notification_window_enabled ?? true;
+    const windowEnabled = windowByUser.get(v.user_id) ?? true;
     const effTime = (offsetMin: number): Date =>
       windowEnabled
         ? getEffectiveTime(eventStart, offsetMin, startHour, endHour)
