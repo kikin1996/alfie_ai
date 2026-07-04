@@ -24,6 +24,37 @@ export async function initiateVapiCall(opts: {
   agencyName?: string;
   minutesBefore?: number;
 }): Promise<string> {
+  const startTime = new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Europe/Prague",
+  });
+  const startDate = new Date(opts.startISO).toLocaleDateString("cs-CZ", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "Europe/Prague",
+  });
+  const clientName = opts.name || "klient";
+  const agencyName = opts.agencyName || "realitní kancelář";
+  const address = opts.address || "";
+
+  // Asistent má First Message = {{firstMessage}} a System Prompt = {{systemPrompt}},
+  // takže celý text hovoru skládáme tady a posíláme jako proměnné (s reálným časem).
+  const firstMessage =
+    `Dobrý den, tady ${agencyName}. Volám kvůli připomenutí prohlídky nemovitosti` +
+    `${address ? ` na adrese ${address}` : ""}, kterou máte naplánovanou na ${startDate} v ${startTime}. ` +
+    `Chtěl bych ověřit, jestli termín platí a dorazíte. Můžete mi to prosím potvrdit?`;
+
+  const systemPrompt =
+    `Jsi zdvořilý telefonní asistent realitní kanceláře ${agencyName}. ` +
+    `Voláš klientovi jménem ${clientName} kvůli připomenutí a potvrzení prohlídky nemovitosti. ` +
+    `Detaily prohlídky – adresa: ${address || "neuvedena"}; termín: ${startDate} v ${startTime}. ` +
+    `Tvým úkolem je ověřit, zda klient na prohlídku dorazí. ` +
+    `Když potvrdí, poděkuj a rozluč se. Když nemůže nebo chce zrušit, zdvořile to potvrď` +
+    `${opts.brokerName || opts.brokerPhone ? ` a případně předej kontakt na makléře ${opts.brokerName ?? ""} ${opts.brokerPhone ?? ""}`.trimEnd() : ""}. ` +
+    `Mluv česky, stručně, přátelsky a přirozeně. Nevymýšlej si žádné informace nad rámec zadání.`;
+
   const res = await fetch("https://api.vapi.ai/call", {
     method: "POST",
     headers: {
@@ -42,43 +73,24 @@ export async function initiateVapiCall(opts: {
         event_id: opts.eventId,
         address: opts.address,
         startISO: opts.startISO,
-        startTime: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
-          hour: "2-digit",
-          minute: "2-digit",
-          timeZone: "Europe/Prague",
-        }),
+        startTime,
       },
       assistantOverrides: {
         variableValues: {
+          // Hlavní proměnné, které asistent používá:
+          firstMessage,
+          systemPrompt,
+          // Doplňkové (kdyby je prompt používal jednotlivě):
           brokerName: opts.brokerName ?? "",
           brokerPhone: opts.brokerPhone ?? "",
           agencyName: opts.agencyName ?? "",
           clientName: opts.name,
           address: opts.address,
           minutesBefore: String(opts.minutesBefore ?? 30),
-          // Čas prohlídky pod několika názvy – ať se trefíme do proměnné, kterou
-          // používá VAPI asistent (startTime / time / cas).
-          startTime: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: "Europe/Prague",
-          }),
-          time: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: "Europe/Prague",
-          }),
-          cas: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
-            hour: "2-digit",
-            minute: "2-digit",
-            timeZone: "Europe/Prague",
-          }),
-          startDate: new Date(opts.startISO).toLocaleDateString("cs-CZ", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            timeZone: "Europe/Prague",
-          }),
+          startTime,
+          time: startTime,
+          cas: startTime,
+          startDate,
         },
       },
     }),
