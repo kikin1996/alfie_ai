@@ -56,7 +56,19 @@ export async function initiateVapiCall(opts: {
           clientName: opts.name,
           address: opts.address,
           minutesBefore: String(opts.minutesBefore ?? 30),
+          // Čas prohlídky pod několika názvy – ať se trefíme do proměnné, kterou
+          // používá VAPI asistent (startTime / time / cas).
           startTime: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Europe/Prague",
+          }),
+          time: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
+            hour: "2-digit",
+            minute: "2-digit",
+            timeZone: "Europe/Prague",
+          }),
+          cas: new Date(opts.startISO).toLocaleTimeString("cs-CZ", {
             hour: "2-digit",
             minute: "2-digit",
             timeZone: "Europe/Prague",

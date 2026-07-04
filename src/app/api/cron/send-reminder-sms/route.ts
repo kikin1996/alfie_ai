@@ -135,6 +135,18 @@ export async function GET(request: NextRequest) {
     return !error;
   };
 
+  // Vrácení kreditů (když se akce po odečtení nepovede)
+  const refundCredits = async (userId: string, amount: number): Promise<void> => {
+    const sub = subsByUser.get(userId);
+    const current = sub?.credits_remaining ?? 0;
+    const { error } = await supabaseAdmin
+      .from("user_subscriptions")
+      .update({ credits_remaining: current + amount, updated_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("status", "active");
+    if (!error && sub) sub.credits_remaining = current + amount;
+  };
+
   const now = new Date();
   let actions = 0;
 
@@ -168,48 +180,90 @@ export async function GET(request: NextRequest) {
 
     // Okno 2h — 1 kredit
     if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, effTime(120), 7) && hasSms) {
-      const hasCredits = await deductCredits(v.user_id, 1);
-      if (hasCredits) {
-        const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
-        const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
-        if (sent) {
-          await supabaseAdmin.from("viewings").update({ sms2h_sent: true, status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `SMS 2h odeslána – ${name}`, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
-          actions++;
+      // Atomicky zabrat slot (zabrání dvojí SMS při souběžných bězích cronu)
+      const { data: claimed } = await supabaseAdmin
+        .from("viewings")
+        .update({ sms2h_sent: true, updated_at: now.toISOString() })
+        .eq("id", v.id)
+        .eq("sms2h_sent", false)
+        .select("id");
+      if (claimed && claimed.length > 0) {
+        const hasCredits = await deductCredits(v.user_id, 1);
+        if (hasCredits) {
+          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
+          const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
+          if (sent) {
+            await supabaseAdmin.from("viewings").update({ status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
+            if (userSettings) await notify(userSettings, `SMS 2h odeslána – ${name}`, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
+            actions++;
+          } else {
+            // Odeslání selhalo → vrátit kredit i uvolnit slot
+            await refundCredits(v.user_id, 1);
+            await supabaseAdmin.from("viewings").update({ sms2h_sent: false, updated_at: now.toISOString() }).eq("id", v.id);
+          }
+        } else {
+          await supabaseAdmin.from("viewings").update({ sms2h_sent: false, updated_at: now.toISOString() }).eq("id", v.id);
+          if (userSettings) await notify(userSettings, "⚠️ Nedostatek kreditů", `⚠️ SMS pro ${name} (${v.address}) nebyla odeslána – nedostatek kreditů. Dobijte předplatné.`).catch(() => {});
         }
-      } else if (userSettings) {
-        await notify(userSettings, "⚠️ Nedostatek kreditů", `⚠️ SMS pro ${name} (${v.address}) nebyla odeslána – nedostatek kreditů. Dobijte předplatné.`).catch(() => {});
       }
     }
 
     // Okno 1h — 1 kredit
     if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, effTime(60), 7) && hasSms) {
-      const hasCredits = await deductCredits(v.user_id, 1);
-      if (hasCredits) {
-        const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
-        const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
-        if (sent) {
-          await supabaseAdmin.from("viewings").update({ sms1h_sent: true, updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
-          actions++;
+      const { data: claimed } = await supabaseAdmin
+        .from("viewings")
+        .update({ sms1h_sent: true, updated_at: now.toISOString() })
+        .eq("id", v.id)
+        .eq("sms1h_sent", false)
+        .select("id");
+      if (claimed && claimed.length > 0) {
+        const hasCredits = await deductCredits(v.user_id, 1);
+        if (hasCredits) {
+          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
+          const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
+          if (sent) {
+            if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
+            actions++;
+          } else {
+            await refundCredits(v.user_id, 1);
+            await supabaseAdmin.from("viewings").update({ sms1h_sent: false, updated_at: now.toISOString() }).eq("id", v.id);
+          }
+        } else {
+          await supabaseAdmin.from("viewings").update({ sms1h_sent: false, updated_at: now.toISOString() }).eq("id", v.id);
+          if (userSettings) await notify(userSettings, "⚠️ Nedostatek kreditů", `⚠️ SMS pro ${name} (${v.address}) nebyla odeslána – nedostatek kreditů. Dobijte předplatné.`).catch(() => {});
         }
-      } else if (userSettings) {
-        await notify(userSettings, "⚠️ Nedostatek kreditů", `⚠️ SMS pro ${name} (${v.address}) nebyla odeslána – nedostatek kreditů. Dobijte předplatné.`).catch(() => {});
       }
     }
 
     // Okno VAPI hovoru — 5 kreditů
     if (!v.vapi_called && v.vapi_enabled && isInWindow(now, effTime(vapiMinutesBefore), 7) && hasVapi) {
-      const hasCredits = await deductCredits(v.user_id, 5);
-      if (hasCredits) {
-        const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
-        if (callId) {
-          await supabaseAdmin.from("viewings").update({ vapi_called: true, vapi_call_id: callId, updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `VAPI hovor spuštěn – ${name}`, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
-          actions++;
+      // Atomicky "zabrat" slot: vapi_called → true jen pokud je zatím false.
+      // Zabrání dvojímu hovoru při souběžných bězích cronu (externí scheduler + retry).
+      const { data: claimed } = await supabaseAdmin
+        .from("viewings")
+        .update({ vapi_called: true, updated_at: now.toISOString() })
+        .eq("id", v.id)
+        .eq("vapi_called", false)
+        .select("id");
+
+      if (claimed && claimed.length > 0) {
+        const hasCredits = await deductCredits(v.user_id, 5);
+        if (hasCredits) {
+          const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
+          if (callId) {
+            await supabaseAdmin.from("viewings").update({ vapi_call_id: callId, updated_at: now.toISOString() }).eq("id", v.id);
+            if (userSettings) await notify(userSettings, `VAPI hovor spuštěn – ${name}`, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
+            actions++;
+          } else {
+            // Hovor se nepodařilo zahájit → vrátit kredity i uvolnit slot (může se zkusit znovu)
+            await refundCredits(v.user_id, 5);
+            await supabaseAdmin.from("viewings").update({ vapi_called: false, updated_at: now.toISOString() }).eq("id", v.id);
+          }
+        } else {
+          // Nedostatek kreditů → uvolnit slot
+          await supabaseAdmin.from("viewings").update({ vapi_called: false, updated_at: now.toISOString() }).eq("id", v.id);
+          if (userSettings) await notify(userSettings, "⚠️ Nedostatek kreditů", `⚠️ Hovor pro ${name} (${v.address}) nebyl zahájen – nedostatek kreditů (potřeba 5). Dobijte předplatné.`).catch(() => {});
         }
-      } else if (userSettings) {
-        await notify(userSettings, "⚠️ Nedostatek kreditů", `⚠️ Hovor pro ${name} (${v.address}) nebyl zahájen – nedostatek kreditů (potřeba 5). Dobijte předplatné.`).catch(() => {});
       }
     }
 
