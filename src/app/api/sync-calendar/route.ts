@@ -63,7 +63,10 @@ export async function POST() {
   const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
   const now = new Date();
-  const timeMin = now.toISOString();
+  // Od začátku dneška – ať se re-syncnou i dnešní už probíhající/proběhlé události
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+  const timeMin = startOfToday.toISOString();
   const timeMax = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 1 měsíc dopředu
   const keyword = (settings.trigger_keyword ?? "#prohlidka").trim();
 
