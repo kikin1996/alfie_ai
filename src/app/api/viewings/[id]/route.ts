@@ -85,17 +85,21 @@ export async function PATCH(
           oauth2Client.setCredentials({ refresh_token: settings.google_refresh_token });
           const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-          // Formát, který parser znovu spolehlivě naparsuje:
-          //   summary:     "Jméno, prohlídka"
-          //   description: "Tel: +420... \nAdresa: Ulice, Město"
+          // Zapsat ve stejném formátu, jaký uživatel používá – vše v názvu,
+          // aby adresa zůstala viditelná v Google Kalendáři:
+          //   summary:  "Jméno, Adresa, Telefon, prohlídka"
+          // description vyčistíme (ať staré "Adresa:/Tel:" nepřebijí nový název),
+          // location nastavíme na adresu (pro mapy).
           const patchBody: {
             summary: string;
             description: string;
+            location: string;
             start?: { dateTime: string; timeZone: string };
             end?: { dateTime: string; timeZone: string };
           } = {
-            summary: `${finalName || "Klient"}, ${keyword}`,
-            description: `Tel: ${finalPhone || "—"}\nAdresa: ${finalAddress || "—"}`,
+            summary: `${finalName || "Klient"}, ${finalAddress || "—"}, ${finalPhone || "—"}, ${keyword}`,
+            description: "",
+            location: finalAddress || "",
           };
           if (timeChanged) {
             patchBody.start = { dateTime: finalStart, timeZone: "Europe/Prague" };
