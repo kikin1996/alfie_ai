@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendSms } from "@/lib/smsbrana";
 import { notify } from "@/lib/notify";
 import { initiateVapiCall } from "@/lib/vapi";
+import { shortCode, withCode } from "@/lib/shortCode";
 import type { ExtraNotification } from "@/types";
 
 function checkCronAuth(request: NextRequest): boolean {
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
   const userIds = [...new Set(viewings.map((v) => v.user_id))];
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, sms_template, notification_time_from, notification_time_to, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
+    .select("user_id, sms_template, notification_window_enabled, notification_time_from, notification_time_to, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
     .in("user_id", userIds);
 
   const settingsByUser = new Map((settingsList ?? []).map((s) => [s.user_id, s]));
@@ -135,24 +136,31 @@ export async function GET(request: NextRequest) {
     const eventStart = new Date(v.event_start);
     const timeStr = eventStart.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
     const name = v.client_name || "Klient";
+    const code = shortCode(v.id);
     const agencyName = userSettings?.agency_name ?? "";
     const template = userSettings?.sms_template ??
-      "Dobrý den, připomínáme prohlídku na adrese {address} v {time}. Prosím potvrďte, zda přijdete. Děkujeme, {agencyName}";
+      "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.";
     const brokerName = userSettings?.broker_name ?? "";
     const brokerPhone = userSettings?.broker_phone ?? "";
 
     const startHour = parseHour(userSettings?.notification_time_from ?? "08:00");
     const endHour = parseHour(userSettings?.notification_time_to ?? "18:00");
+    // Když je časové okno vypnuté, notifikace jdou v přirozeném čase (bez mrtvé zóny).
+    const windowEnabled = userSettings?.notification_window_enabled ?? true;
+    const effTime = (offsetMin: number): Date =>
+      windowEnabled
+        ? getEffectiveTime(eventStart, offsetMin, startHour, endHour)
+        : new Date(eventStart.getTime() - offsetMin * 60000);
 
     // Okno 2h — 1 kredit
-    if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, getEffectiveTime(eventStart, 120, startHour, endHour), 7) && hasSms) {
+    if (!v.sms2h_sent && v.sms2h_enabled && isInWindow(now, effTime(120), 7) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
-        const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName);
+        const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
           await supabaseAdmin.from("viewings").update({ sms2h_sent: true, status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `SMS 2h odeslána – ${name}`, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);
+          if (userSettings) await notify(userSettings, `SMS 2h odeslána – ${name}`, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
           actions++;
         }
       } else if (userSettings) {
@@ -161,14 +169,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Okno 1h — 1 kredit
-    if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, getEffectiveTime(eventStart, 60, startHour, endHour), 7) && hasSms) {
+    if (!v.sms1h_sent && v.sms1h_enabled && isInWindow(now, effTime(60), 7) && hasSms) {
       const hasCredits = await deductCredits(v.user_id, 1);
       if (hasCredits) {
-        const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName);
+        const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
           await supabaseAdmin.from("viewings").update({ sms1h_sent: true, updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);
+          if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
           actions++;
         }
       } else if (userSettings) {
@@ -177,13 +185,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Okno VAPI hovoru — 5 kreditů
-    if (!v.vapi_called && v.vapi_enabled && isInWindow(now, getEffectiveTime(eventStart, vapiMinutesBefore, startHour, endHour), 7) && hasVapi) {
+    if (!v.vapi_called && v.vapi_enabled && isInWindow(now, effTime(vapiMinutesBefore), 7) && hasVapi) {
       const hasCredits = await deductCredits(v.user_id, 5);
       if (hasCredits) {
         const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
         if (callId) {
           await supabaseAdmin.from("viewings").update({ vapi_called: true, vapi_call_id: callId, updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `VAPI hovor spuštěn – ${name}`, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);
+          if (userSettings) await notify(userSettings, `VAPI hovor spuštěn – ${name}`, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
           actions++;
         }
       } else if (userSettings) {
@@ -200,17 +208,17 @@ export async function GET(request: NextRequest) {
       const notif = updatedExtras[i];
       if (notif.sent || !notif.enabled) continue;
 
-      if (!isInWindow(now, getEffectiveTime(eventStart, notif.minutesBefore, startHour, endHour), 7)) continue;
+      if (!isInWindow(now, effTime(notif.minutesBefore), 7)) continue;
 
       if (notif.type === "sms" && hasSms) {
         const hasCredits = await deductCredits(v.user_id, 1);
         if (hasCredits) {
-          const body = fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName);
+          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
             updatedExtras[i] = { ...notif, sent: true };
             extrasUpdated = true;
-            if (userSettings) await notify(userSettings, `${notif.label} odeslána – ${name}`, `📨 ${notif.label} odeslána: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);
+            if (userSettings) await notify(userSettings, `${notif.label} odeslána – ${name}`, `📨 ${notif.label} odeslána: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           }
         }
@@ -222,7 +230,7 @@ export async function GET(request: NextRequest) {
             await supabaseAdmin.from("viewings").update({ vapi_call_id: callId }).eq("id", v.id);
             updatedExtras[i] = { ...notif, sent: true };
             extrasUpdated = true;
-            if (userSettings) await notify(userSettings, `${notif.label} hovor spuštěn – ${name}`, `📞 ${notif.label} hovor spuštěn: ${name} (${v.client_phone})\n📍 ${v.address}\n🕐 ${timeStr}`);
+            if (userSettings) await notify(userSettings, `${notif.label} hovor spuštěn – ${name}`, `📞 ${notif.label} hovor spuštěn: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           }
         }

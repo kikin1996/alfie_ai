@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { notify } from "@/lib/notify";
+import { shortCode } from "@/lib/shortCode";
 import Anthropic from "@anthropic-ai/sdk";
 
 function normalizePhone(phone: string): string {
@@ -96,17 +97,45 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
     return NextResponse.json({ error: "Supabase not configured" }, { status: 500 });
   }
 
-  // Najít matching prohlídku podle telefonu (poslední 7 dní, stav sms_sent nebo pending)
+  // Najít matching prohlídky podle telefonu (poslední 7 dní, stav sms_sent nebo pending)
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
-    .select("id, user_id, client_phone, client_name, address, event_start, status")
+    .select("id, user_id, client_phone, client_name, address, event_start, status, sms2h_sent, sms1h_sent, sms_sent_at")
     .in("status", ["sms_sent", "pending"])
     .gte("event_start", since);
 
-  const viewing = (viewings ?? []).find(
-    (v) => normalizePhone((v as { client_phone: string }).client_phone) === fromNormalized
-  ) as { id: string; user_id: string; client_phone: string; client_name: string; address: string; event_start: string } | undefined;
+  type Row = {
+    id: string; user_id: string; client_phone: string; client_name: string;
+    address: string; event_start: string; status: string;
+    sms2h_sent?: boolean; sms1h_sent?: boolean; sms_sent_at?: string | null;
+  };
+
+  const candidates = ((viewings ?? []) as Row[]).filter(
+    (v) => normalizePhone(v.client_phone) === fromNormalized
+  );
+
+  if (candidates.length === 0) {
+    return NextResponse.json({ ok: true, message: "No matching viewing" });
+  }
+
+  // Prohlídky, kterým už reálně odešla SMS – na tu klient nejspíš reaguje.
+  // (Neplést s prohlídkou, které SMS ještě neodešla → nesmí se omylem potvrdit.)
+  const notified = candidates.filter((v) => v.status === "sms_sent" || v.sms2h_sent || v.sms1h_sent);
+  const pool = notified.length ? notified : candidates;
+
+  // 1) Spárovat podle kódu prohlídky uvedeného v textu zprávy (např. "ANO 4821")
+  const codesInMsg: string[] = message.match(/\d{4}/g) ?? [];
+  let viewing: Row | undefined = codesInMsg.length
+    ? pool.find((v) => codesInMsg.includes(shortCode(v.id)))
+    : undefined;
+
+  // 2) Fallback: nejnovější odeslaná SMS (na tu klient reaguje nejpravděpodobněji)
+  if (!viewing) {
+    viewing = pool
+      .slice()
+      .sort((a, b) => new Date(b.sms_sent_at ?? b.event_start).getTime() - new Date(a.sms_sent_at ?? a.event_start).getTime())[0];
+  }
 
   if (!viewing) {
     return NextResponse.json({ ok: true, message: "No matching viewing" });
@@ -141,8 +170,14 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
     .maybeSingle();
 
   if (settings) {
-    const name = (viewing as { client_name: string }).client_name || number;
-    await notify(settings, `Odpověď klienta – ${name}`, `💬 Odpověď klienta: ${name} (${number})\n📍 ${(viewing as { address: string }).address}\n✉️ Zpráva: "${message}"\n→ ${confirmedLabel}${reason ? ` (${reason})` : ""}`);
+    const name = viewing.client_name || number;
+    const code = shortCode(viewing.id);
+    const timeStr = new Date(viewing.event_start).toLocaleString("cs-CZ", { timeZone: "Europe/Prague", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+    await notify(
+      settings,
+      `Odpověď klienta – ${name} (kód ${code})`,
+      `💬 Odpověď klienta: ${name} (${number})\n🔖 Kód prohlídky: ${code}\n📍 ${viewing.address}\n🕐 ${timeStr}\n✉️ Zpráva: "${message}"\n→ ${confirmedLabel}${reason ? ` (${reason})` : ""}`
+    );
   }
 
   return NextResponse.json({ ok: true, intent, status: newStatus ?? "unchanged" });

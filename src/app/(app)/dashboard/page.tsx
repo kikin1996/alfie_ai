@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
 import CalendarView from "@/components/CalendarView";
+import { shortCode, withCode } from "@/lib/shortCode";
 import type { Viewing, ViewingStatus, ExtraNotification } from "@/types";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -468,6 +469,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
           </div>
         ) : (
           <>
+            <p><span className="font-medium text-foreground">Kód prohlídky:</span> <span className="font-mono font-semibold text-navy">{shortCode(viewing.id)}</span></p>
             <p><span className="font-medium text-foreground">Adresa:</span> {viewing.address || "—"}</p>
             <p><span className="font-medium text-foreground">Datum:</span> {format(start, "d. M. yyyy", { locale: cs })}</p>
             <p><span className="font-medium text-foreground">Čas:</span> {format(start, "HH:mm", { locale: cs })}</p>
@@ -526,13 +528,13 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
             )}
             {(viewing.sms2hSent || viewing.sms1hSent || viewing.status === "cancelled" || viewing.status === "confirmed") && smsSettings && (() => {
               const timeStr = new Date(viewing.eventStart).toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
-              const text = smsSettings.smsTemplate
+              const text = withCode(smsSettings.smsTemplate
                 .replace(/\{address\}/g, viewing.address || "")
                 .replace(/\{time\}/g, timeStr)
                 .replace(/\{clientName\}/g, viewing.clientName || "Klient")
                 .replace(/\{brokerName\}/g, smsSettings.brokerName)
                 .replace(/\{brokerPhone\}/g, smsSettings.brokerPhone)
-                .replace(/\{agencyName\}/g, smsSettings.agencyName);
+                .replace(/\{agencyName\}/g, smsSettings.agencyName), shortCode(viewing.id));
               return (
                 <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">
                   <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Text odeslané SMS:</p>
@@ -767,7 +769,7 @@ export default function DashboardPage() {
           .eq("user_id", user.id)
           .maybeSingle();
         if (data) setSmsSettings({
-          smsTemplate: data.sms_template || "Dobrý den, připomínáme prohlídku na adrese {address} v {time}. Prosím potvrďte, zda přijdete. Děkujeme, {agencyName}",
+          smsTemplate: data.sms_template || "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.",
           brokerName: data.broker_name || "",
           brokerPhone: data.broker_phone || "",
           agencyName: data.agency_name || "",
@@ -827,8 +829,10 @@ export default function DashboardPage() {
   const upcoming = viewings.filter(
     (v) => new Date(v.eventStart) >= new Date() && v.status !== "cancelled"
   );
-  const past = viewings.filter(
-    (v) => new Date(v.eventStart) < new Date() || v.status === "cancelled"
+  // Zrušené prohlídky zůstávají na dashboardu, dokud nepřejde jejich původní čas –
+  // makléř tak vidí, co bylo dnes zrušeno. Po uplynutí času spadnou do historie.
+  const cancelledUpcoming = viewings.filter(
+    (v) => new Date(v.eventStart) >= new Date() && v.status === "cancelled"
   );
 
   return (
@@ -977,6 +981,16 @@ export default function DashboardPage() {
               <div className="grid gap-3">
                 {upcoming.map((v) => (
                   <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} smsSettings={smsSettings} />
+                ))}
+              </div>
+            </section>
+          )}
+          {cancelledUpcoming.length > 0 && (
+            <section>
+              <h2 className="text-lg font-medium text-muted-foreground mb-3">Zrušené</h2>
+              <div className="grid gap-3">
+                {cancelledUpcoming.map((v) => (
+                  <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} isPast smsSettings={smsSettings} />
                 ))}
               </div>
             </section>

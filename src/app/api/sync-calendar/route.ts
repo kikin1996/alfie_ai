@@ -84,7 +84,7 @@ export async function POST() {
     // Načíst existující prohlídky uživatele (zachováme jejich stav)
     const { data: existingViewings } = await supabaseAdmin
       .from("viewings")
-      .select("id, calendar_event_id, status, sms2h_sent, sms1h_sent, vapi_called, sms_sent_at, confirmed_at, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications")
+      .select("id, calendar_event_id, status, event_start, sms2h_sent, sms1h_sent, vapi_called, sms_sent_at, confirmed_at, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications")
       .eq("user_id", session.user.id);
 
     const existingMap = new Map((existingViewings ?? []).map((v) => [v.calendar_event_id, v]));
@@ -174,8 +174,18 @@ export async function POST() {
       }
       synced++;
     }
-    // Smazat prohlídky které už nejsou v Google Kalendáři
-    const toDelete = (existingViewings ?? []).filter((v) => !calendarEventIds.has(v.calendar_event_id)).map((v) => v.id);
+    // Smazat pouze BUDOUCÍ aktivní prohlídky, které už nejsou v Google Kalendáři
+    // (broker je smazal z kalendáře). Minulé, zrušené a potvrzené prohlídky
+    // ponecháme – patří do historie a nesmí je sync mazat.
+    const nowMs = now.getTime();
+    const toDelete = (existingViewings ?? [])
+      .filter((v) =>
+        !calendarEventIds.has(v.calendar_event_id) &&
+        new Date(v.event_start).getTime() >= nowMs &&
+        v.status !== "cancelled" &&
+        v.status !== "confirmed"
+      )
+      .map((v) => v.id);
     if (toDelete.length > 0) {
       await supabaseAdmin.from("viewings").delete().in("id", toDelete);
     }

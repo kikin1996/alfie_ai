@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient, isSupabaseConfigured } from "@/lib/supabase";
+import { shortCode, withCode } from "@/lib/shortCode";
 import type { Viewing, ViewingStatus } from "@/types";
 import { format } from "date-fns";
 import { cs } from "date-fns/locale";
@@ -93,13 +94,13 @@ function buildSmsText(v: Viewing, s: SmsSettings): string {
   const timeStr = new Date(v.eventStart).toLocaleTimeString("cs-CZ", {
     timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit",
   });
-  return s.smsTemplate
+  return withCode(s.smsTemplate
     .replace(/\{address\}/g, v.address || "")
     .replace(/\{time\}/g, timeStr)
     .replace(/\{clientName\}/g, v.clientName || "Klient")
     .replace(/\{brokerName\}/g, s.brokerName)
     .replace(/\{brokerPhone\}/g, s.brokerPhone)
-    .replace(/\{agencyName\}/g, s.agencyName);
+    .replace(/\{agencyName\}/g, s.agencyName), shortCode(v.id));
 }
 
 export default function HistoryPage() {
@@ -169,7 +170,7 @@ export default function HistoryPage() {
           .eq("user_id", user.id)
           .maybeSingle();
         if (data) setSmsSettings({
-          smsTemplate: data.sms_template || "Dobrý den, připomínáme prohlídku na adrese {address} v {time}. Prosím potvrďte, zda přijdete. Děkujeme, {agencyName}",
+          smsTemplate: data.sms_template || "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.",
           brokerName: data.broker_name || "",
           brokerPhone: data.broker_phone || "",
           agencyName: data.agency_name || "",
@@ -218,6 +219,7 @@ export default function HistoryPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-foreground space-y-1.5">
+                  <p><span className="font-medium text-foreground">Kód prohlídky:</span> <span className="font-mono font-semibold text-navy">{shortCode(v.id)}</span></p>
                   <p><span className="font-medium text-foreground">Adresa:</span> {v.address || "—"}</p>
                   <p><span className="font-medium text-foreground">Datum:</span> {format(start, "d. M. yyyy", { locale: cs })}</p>
                   <p><span className="font-medium text-foreground">Čas:</span> {start.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" })}</p>

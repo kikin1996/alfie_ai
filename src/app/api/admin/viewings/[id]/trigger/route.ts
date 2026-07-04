@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendSms } from "@/lib/smsbrana";
 import { initiateVapiCall } from "@/lib/vapi";
+import { shortCode, withCode } from "@/lib/shortCode";
 
 function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string) {
   return template
@@ -73,8 +74,8 @@ export async function POST(
       return NextResponse.json({ error: "SMSbrána není nakonfigurována v nastavení" }, { status: 400 });
     }
     const template = userSettings?.sms_template ??
-      "Připomínáme prohlídku za hodinu: {address} v {time}. Odpovězte ANO/NE.";
-    const body = fillTemplate(template, viewing.address, timeStr, name, userSettings?.broker_name ?? "", userSettings?.broker_phone ?? "");
+      "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.";
+    const body = withCode(fillTemplate(template, viewing.address, timeStr, name, userSettings?.broker_name ?? "", userSettings?.broker_phone ?? ""), shortCode(viewing.id));
     const testNumber = userSettings?.broker_phone || viewing.client_phone;
     const sent = await sendSms(smsLogin, smsPassword, testNumber, body).catch(() => false);
     if (!sent) return NextResponse.json({ error: "SMS se nepodařilo odeslat" }, { status: 500 });

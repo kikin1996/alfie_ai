@@ -20,15 +20,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Supabase admin not configured" }, { status: 500 });
   }
 
-  // Smazat prohlídky starší než včerejší den
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  yesterday.setHours(0, 0, 0, 0);
+  // Smazat prohlídky starší než 7 dní (týden zpět zůstávají v historii)
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 7);
+  cutoff.setHours(0, 0, 0, 0);
 
   const { error, count } = await supabaseAdmin
     .from("viewings")
     .delete({ count: "exact" })
-    .lt("event_start", yesterday.toISOString());
+    .lt("event_start", cutoff.toISOString());
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -50,6 +50,7 @@ const schema = z.object({
   agencyName: z.string().optional(),
   triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
+  notificationWindowEnabled: z.boolean().default(true),
   notificationTimeFrom: z.string().regex(TIME_REGEX, "Formát HH:MM").default("08:00"),
   notificationTimeTo: z.string().regex(TIME_REGEX, "Formát HH:MM").default("18:00"),
   defaultSms2hEnabled: z.boolean().default(true),
@@ -64,7 +65,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 const defaultTemplate =
-  "Dobrý den, připomínáme prohlídku na adrese {address} v {time}. Prosím potvrďte, zda přijdete. Děkujeme, {agencyName}";
+  "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.";
 
 function SettingsPageInner() {
   const { user, loading: authLoading } = useAuth();
@@ -96,6 +97,7 @@ function SettingsPageInner() {
       agencyName: "",
       triggerKeyword: "prohlídka",
       smsTemplate: defaultTemplate,
+      notificationWindowEnabled: true,
       notificationTimeFrom: "08:00",
       notificationTimeTo: "18:00",
       defaultSms2hEnabled: true,
@@ -119,7 +121,7 @@ function SettingsPageInner() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
+            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_window_enabled, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -133,6 +135,7 @@ function SettingsPageInner() {
             agencyName: data.agency_name ?? "",
             triggerKeyword: data.trigger_keyword ?? "prohlídka",
             smsTemplate: data.sms_template ?? defaultTemplate,
+            notificationWindowEnabled: data.notification_window_enabled ?? true,
             notificationTimeFrom: data.notification_time_from ?? "08:00",
             notificationTimeTo: data.notification_time_to ?? "18:00",
             defaultSms2hEnabled: data.default_sms2h_enabled ?? true,
@@ -170,6 +173,7 @@ function SettingsPageInner() {
           agency_name: values.agencyName || null,
           trigger_keyword: values.triggerKeyword,
           sms_template: values.smsTemplate,
+          notification_window_enabled: values.notificationWindowEnabled,
           notification_time_from: values.notificationTimeFrom,
           notification_time_to: values.notificationTimeTo,
           default_sms2h_enabled: values.defaultSms2hEnabled,
@@ -531,12 +535,33 @@ function SettingsPageInner() {
         {/* Časové okno */}
         <Card>
           <CardHeader>
-            <CardTitle>Časové okno pro notifikace</CardTitle>
-            <CardDescription>
-              SMS a hovory se odesílají jen v tomto čase. Pokud by notifikace vyšla mimo okno, posune se na předchozí den ve{" "}
-              <strong>{form.watch("notificationTimeTo") || "18:00"}</strong> − offset.
-            </CardDescription>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle>Časové okno pro notifikace</CardTitle>
+                <CardDescription>
+                  {form.watch("notificationWindowEnabled") ? (
+                    <>
+                      SMS a hovory se odesílají jen v tomto čase. Pokud by notifikace vyšla mimo okno, posune se na předchozí den ve{" "}
+                      <strong>{form.watch("notificationTimeTo") || "18:00"}</strong> − offset.
+                    </>
+                  ) : (
+                    <>Časové okno je vypnuté – notifikace se odesílají v přirozeném čase (offset před prohlídkou), i brzy ráno nebo pozdě večer.</>
+                  )}
+                </CardDescription>
+              </div>
+              <div
+                role="switch"
+                aria-checked={form.watch("notificationWindowEnabled")}
+                onClick={() => form.setValue("notificationWindowEnabled", !form.watch("notificationWindowEnabled"), { shouldDirty: true })}
+                className={`relative mt-1 inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                  form.watch("notificationWindowEnabled") ? "bg-navy" : "bg-muted-foreground/30"
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.watch("notificationWindowEnabled") ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+            </div>
           </CardHeader>
+          {form.watch("notificationWindowEnabled") && (
           <CardContent>
             <div className="flex items-center gap-4">
               <div>
@@ -578,6 +603,7 @@ function SettingsPageInner() {
               })()}
             </p>
           </CardContent>
+          )}
         </Card>
 
         {/* Notifikace */}

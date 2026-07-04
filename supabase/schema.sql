@@ -7,7 +7,7 @@ create table if not exists public.user_settings (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
   trigger_keyword text not null default '#prohlidka',
-  sms_template text not null default 'Dobrý den, potvrzujeme prohlídku na adrese {address} dnes v {time}. Odpovězte YES pro potvrzení.',
+  sms_template text not null default 'Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.',
   google_refresh_token text,
   -- SMSbrána.cz
   smsbrana_login text,
