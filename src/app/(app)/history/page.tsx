@@ -116,13 +116,14 @@ export default function HistoryPage() {
       setLoading(false);
       return;
     }
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
+    // Vše, co už proběhlo (čas < teď) NEBO je zrušené – ať dnešní proběhlé
+    // prohlídky nezmizí z dashboardu i historie (mezera mezi "teď" a půlnocí).
+    const nowIso = new Date().toISOString();
     const { data } = await supabase
       .from("viewings")
       .select("*")
       .eq("user_id", user.id)
-      .or(`event_start.lt.${startOfToday.toISOString()},status.eq.cancelled`)
+      .or(`event_start.lt.${nowIso},status.eq.cancelled`)
       .order("event_start", { ascending: false });
 
     const rows = (data as Record<string, unknown>[]) ?? [];

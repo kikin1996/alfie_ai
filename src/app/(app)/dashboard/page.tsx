@@ -413,8 +413,15 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
   const handleCancel = async () => {
     setCancelling(true);
     try {
-      await fetch(`/api/viewings/${viewing.id}`, { method: "DELETE" });
-      setRemoved(true);
+      // Měkké zrušení: status → cancelled (zůstane v historii), událost se smaže z Google Kalendáře
+      const res = await fetch(`/api/viewings/${viewing.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "cancelled" }),
+      });
+      if (res.ok) {
+        setViewing((v) => ({ ...v, status: "cancelled" }));
+      }
     } finally {
       setCancelling(false);
       setConfirmCancel(false);

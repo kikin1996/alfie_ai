@@ -16,12 +16,14 @@ export async function PATCH(
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
-  const { address, clientName, clientPhone, eventStart } = body as {
+  const { address, clientName, clientPhone, eventStart, status } = body as {
     address?: string;
     clientName?: string;
     clientPhone?: string;
     eventStart?: string; // ISO nebo "YYYY-MM-DDTHH:mm" z datetime-local inputu
+    status?: string; // "cancelled" | "confirmed" – měkké zrušení/potvrzení (zůstane v historii)
   };
+  const isCancelling = status === "cancelled";
 
   const admin = getSupabaseAdmin();
 
@@ -46,6 +48,10 @@ export async function PATCH(
   if (address !== undefined) updates.address = address;
   if (clientName !== undefined) updates.client_name = clientName;
   if (clientPhone !== undefined) updates.client_phone = clientPhone;
+  if (status === "cancelled" || status === "confirmed") {
+    updates.status = status;
+    if (status === "confirmed") updates.confirmed_at = new Date().toISOString();
+  }
 
   // Čas – zachovat délku prohlídky (end − start), případně default 30 min
   let finalStart = viewing.event_start as string;
@@ -85,32 +91,41 @@ export async function PATCH(
           oauth2Client.setCredentials({ refresh_token: settings.google_refresh_token });
           const calendar = google.calendar({ version: "v3", auth: oauth2Client });
 
-          // Zapsat ve stejném formátu, jaký uživatel používá – vše v názvu,
-          // aby adresa zůstala viditelná v Google Kalendáři:
-          //   summary:  "Jméno, Adresa, Telefon, prohlídka"
-          // description vyčistíme (ať staré "Adresa:/Tel:" nepřebijí nový název),
-          // location nastavíme na adresu (pro mapy).
-          const patchBody: {
-            summary: string;
-            description: string;
-            location: string;
-            start?: { dateTime: string; timeZone: string };
-            end?: { dateTime: string; timeZone: string };
-          } = {
-            summary: `${finalName || "Klient"}, ${finalAddress || "—"}, ${finalPhone || "—"}, ${keyword}`,
-            description: "",
-            location: finalAddress || "",
-          };
-          if (timeChanged) {
-            patchBody.start = { dateTime: finalStart, timeZone: "Europe/Prague" };
-            patchBody.end = { dateTime: finalEnd ?? finalStart, timeZone: "Europe/Prague" };
-          }
+          if (isCancelling) {
+            // Zrušení = odstranit událost z Google Kalendáře (prohlídka zůstane
+            // v DB jako "cancelled" → objeví se v historii).
+            await calendar.events.delete({
+              calendarId: "primary",
+              eventId: viewing.calendar_event_id,
+            });
+          } else {
+            // Zapsat ve stejném formátu, jaký uživatel používá – vše v názvu,
+            // aby adresa zůstala viditelná v Google Kalendáři:
+            //   summary:  "Jméno, Adresa, Telefon, prohlídka"
+            // description vyčistíme (ať staré "Adresa:/Tel:" nepřebijí nový název),
+            // location nastavíme na adresu (pro mapy).
+            const patchBody: {
+              summary: string;
+              description: string;
+              location: string;
+              start?: { dateTime: string; timeZone: string };
+              end?: { dateTime: string; timeZone: string };
+            } = {
+              summary: `${finalName || "Klient"}, ${finalAddress || "—"}, ${finalPhone || "—"}, ${keyword}`,
+              description: "",
+              location: finalAddress || "",
+            };
+            if (timeChanged) {
+              patchBody.start = { dateTime: finalStart, timeZone: "Europe/Prague" };
+              patchBody.end = { dateTime: finalEnd ?? finalStart, timeZone: "Europe/Prague" };
+            }
 
-          await calendar.events.patch({
-            calendarId: "primary",
-            eventId: viewing.calendar_event_id,
-            requestBody: patchBody,
-          });
+            await calendar.events.patch({
+              calendarId: "primary",
+              eventId: viewing.calendar_event_id,
+              requestBody: patchBody,
+            });
+          }
           calendarSynced = true;
         } catch {
           // Kalendář se nepodařilo aktualizovat – DB změnu i tak uložíme, ale upozorníme
