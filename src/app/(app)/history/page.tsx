@@ -219,7 +219,7 @@ export default function HistoryPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="text-sm text-muted-foreground space-y-1.5">
-                  <p><span className="font-medium text-foreground">Kód prohlídky:</span> <span className="font-mono font-semibold text-navy">{shortCode(v.id)}</span></p>
+                  <p><span className="font-medium text-foreground">ID prohlídky:</span> <span className="font-mono font-semibold text-navy">{shortCode(v.id)}</span></p>
                   <p><span className="font-medium text-foreground">Adresa:</span> {v.address || "—"}</p>
                   <p><span className="font-medium text-foreground">Datum:</span> {format(start, "d. M. yyyy", { locale: cs })}</p>
                   <p><span className="font-medium text-foreground">Čas:</span> {start.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" })}</p>

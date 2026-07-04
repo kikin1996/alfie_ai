@@ -263,6 +263,14 @@ function AddNotifPanel({ onAdd, onClose }: AddNotifPanelProps) {
 // ViewingCard – stateful karta prohlídky
 // ---------------------------------------------------------------------------
 
+/** ISO → hodnota pro <input type="datetime-local"> v lokálním čase prohlížeče */
+function toDateTimeLocal(iso: string): string {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
   viewing: Viewing;
   isAdmin: boolean;
@@ -274,7 +282,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
   const [triggerState, setTriggerState] = useState<Record<string, "idle" | "busy" | "ok" | "err">>({});
   const [triggerError, setTriggerError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
-  const [editFields, setEditFields] = useState({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone });
+  const [editFields, setEditFields] = useState({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone, eventStart: toDateTimeLocal(viewing.eventStart) });
   const [saving, setSaving] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -290,13 +298,30 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
   const saveEdit = async () => {
     setSaving(true);
     try {
+      // datetime-local (lokální čas) → ISO s časovou zónou, ať server nešoupne čas
+      const eventStartIso = editFields.eventStart
+        ? new Date(editFields.eventStart).toISOString()
+        : undefined;
       const res = await fetch(`/api/viewings/${viewing.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editFields),
+        body: JSON.stringify({
+          address: editFields.address,
+          clientName: editFields.clientName,
+          clientPhone: editFields.clientPhone,
+          eventStart: eventStartIso,
+        }),
       });
       if (res.ok) {
-        setViewing((v) => ({ ...v, ...editFields }));
+        const data = await res.json().catch(() => ({} as { eventStart?: string; eventEnd?: string; calendarSynced?: boolean }));
+        setViewing((v) => ({
+          ...v,
+          address: editFields.address,
+          clientName: editFields.clientName,
+          clientPhone: editFields.clientPhone,
+          eventStart: data.eventStart ?? v.eventStart,
+          eventEnd: data.eventEnd ?? v.eventEnd,
+        }));
         setEditing(false);
       }
     } finally {
@@ -432,7 +457,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               <>
                 <button
                   type="button"
-                  onClick={() => { setEditFields({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone }); setEditing(true); }}
+                  onClick={() => { setEditFields({ address: viewing.address, clientName: viewing.clientName, clientPhone: viewing.clientPhone, eventStart: toDateTimeLocal(viewing.eventStart) }); setEditing(true); }}
                   className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   title="Upravit"
                 >
@@ -466,10 +491,19 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               className="h-7 text-sm"
               placeholder="Telefon klienta"
             />
+            <div>
+              <label className="text-[11px] text-muted-foreground">Datum a čas prohlídky</label>
+              <Input
+                type="datetime-local"
+                value={editFields.eventStart}
+                onChange={(e) => setEditFields((f) => ({ ...f, eventStart: e.target.value }))}
+                className="h-7 text-sm"
+              />
+            </div>
           </div>
         ) : (
           <>
-            <p><span className="font-medium text-foreground">Kód prohlídky:</span> <span className="font-mono font-semibold text-navy">{shortCode(viewing.id)}</span></p>
+            <p><span className="font-medium text-foreground">ID prohlídky:</span> <span className="font-mono font-semibold text-navy">{shortCode(viewing.id)}</span></p>
             <p><span className="font-medium text-foreground">Adresa:</span> {viewing.address || "—"}</p>
             <p><span className="font-medium text-foreground">Datum:</span> {format(start, "d. M. yyyy", { locale: cs })}</p>
             <p><span className="font-medium text-foreground">Čas:</span> {format(start, "HH:mm", { locale: cs })}</p>

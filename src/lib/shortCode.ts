@@ -12,5 +12,5 @@ export function shortCode(viewingId: string): string {
 
 /** Přidá kód prohlídky na konec textu SMS/notifikace. */
 export function withCode(text: string, code: string): string {
-  return `${text} (kód ${code})`;
+  return `${text} (ID ${code})`;
 }

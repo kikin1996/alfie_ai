@@ -175,8 +175,8 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
     const timeStr = new Date(viewing.event_start).toLocaleString("cs-CZ", { timeZone: "Europe/Prague", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
     await notify(
       settings,
-      `Odpověď klienta – ${name} (kód ${code})`,
-      `💬 Odpověď klienta: ${name} (${number})\n🔖 Kód prohlídky: ${code}\n📍 ${viewing.address}\n🕐 ${timeStr}\n✉️ Zpráva: "${message}"\n→ ${confirmedLabel}${reason ? ` (${reason})` : ""}`
+      `Odpověď klienta – ${name} (ID ${code})`,
+      `💬 Odpověď klienta: ${name} (${number})\n🔖 ID prohlídky: ${code}\n📍 ${viewing.address}\n🕐 ${timeStr}\n✉️ Zpráva: "${message}"\n→ ${confirmedLabel}${reason ? ` (${reason})` : ""}`
     );
   }
 

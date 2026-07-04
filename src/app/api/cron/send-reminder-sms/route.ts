@@ -160,7 +160,7 @@ export async function GET(request: NextRequest) {
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
           await supabaseAdmin.from("viewings").update({ sms2h_sent: true, status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `SMS 2h odeslána – ${name}`, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
+          if (userSettings) await notify(userSettings, `SMS 2h odeslána – ${name}`, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
           actions++;
         }
       } else if (userSettings) {
@@ -176,7 +176,7 @@ export async function GET(request: NextRequest) {
         const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
         if (sent) {
           await supabaseAdmin.from("viewings").update({ sms1h_sent: true, updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
+          if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
           actions++;
         }
       } else if (userSettings) {
@@ -191,7 +191,7 @@ export async function GET(request: NextRequest) {
         const callId = await initiateVapiCall({ apiKey: appConfig.vapi_api_key, assistantId: appConfig.vapi_assistant_id, phoneNumberId: appConfig.vapi_phone_number_id, number: v.client_phone, name, eventId: v.id, address: v.address, startISO: eventStart.toISOString(), brokerName, brokerPhone, agencyName: userSettings?.agency_name ?? "", minutesBefore: vapiMinutesBefore }).catch(() => null);
         if (callId) {
           await supabaseAdmin.from("viewings").update({ vapi_called: true, vapi_call_id: callId, updated_at: now.toISOString() }).eq("id", v.id);
-          if (userSettings) await notify(userSettings, `VAPI hovor spuštěn – ${name}`, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
+          if (userSettings) await notify(userSettings, `VAPI hovor spuštěn – ${name}`, `📞 VAPI hovor spuštěn: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
           actions++;
         }
       } else if (userSettings) {
@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
           if (sent) {
             updatedExtras[i] = { ...notif, sent: true };
             extrasUpdated = true;
-            if (userSettings) await notify(userSettings, `${notif.label} odeslána – ${name}`, `📨 ${notif.label} odeslána: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
+            if (userSettings) await notify(userSettings, `${notif.label} odeslána – ${name}`, `📨 ${notif.label} odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           }
         }
@@ -230,7 +230,7 @@ export async function GET(request: NextRequest) {
             await supabaseAdmin.from("viewings").update({ vapi_call_id: callId }).eq("id", v.id);
             updatedExtras[i] = { ...notif, sent: true };
             extrasUpdated = true;
-            if (userSettings) await notify(userSettings, `${notif.label} hovor spuštěn – ${name}`, `📞 ${notif.label} hovor spuštěn: ${name} (${v.client_phone})\n🔖 Kód: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
+            if (userSettings) await notify(userSettings, `${notif.label} hovor spuštěn – ${name}`, `📞 ${notif.label} hovor spuštěn: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           }
         }
