@@ -19,22 +19,53 @@ function parseHour(t: string): number {
   return h + (m || 0) / 60;
 }
 
+const TZ = "Europe/Prague";
+
+/** Wall-clock složky data v pražském čase (ne v UTC serveru!). */
+function pragueParts(d: Date): { year: number; month: number; day: number; hour: number; minute: number } {
+  const p = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(d);
+  const get = (t: string) => Number(p.find((x) => x.type === t)?.value ?? "0");
+  let hour = get("hour");
+  if (hour === 24) hour = 0; // en-GB může vrátit 24 pro půlnoc
+  return { year: get("year"), month: get("month"), day: get("day"), hour, minute: get("minute") };
+}
+
+/** UTC okamžik odpovídající pražskému nástěnnému času (řeší i letní/zimní čas). */
+function pragueWallToUtc(year: number, month: number, day: number, hour: number, minute: number): Date {
+  const guessMs = Date.UTC(year, month - 1, day, hour, minute);
+  const guess = new Date(guessMs);
+  const offsetMs =
+    new Date(guess.toLocaleString("en-US", { timeZone: TZ })).getTime() -
+    new Date(guess.toLocaleString("en-US", { timeZone: "UTC" })).getTime();
+  return new Date(guessMs - offsetMs);
+}
+
 /**
  * Vrátí efektivní čas odeslání notifikace s ohledem na mrtvou zónu.
- * Pokud přirozený čas (event_start − offsetMin) padá mimo [startHour, endHour),
- * posune se na předchozí den v endHour − offsetMin.
+ * Pokud přirozený čas (event_start − offsetMin) v pražském čase padá mimo
+ * [startHour, endHour), posune se na endHour − offset (a když je moc brzy ráno,
+ * na předchozí den). VŠE se počítá v pražské zóně, ne v UTC serveru.
  */
 function getEffectiveTime(eventStart: Date, offsetMinutes: number, startHour: number, endHour: number): Date {
   const natural = new Date(eventStart.getTime() - offsetMinutes * 60000);
-  const h = natural.getHours() + natural.getMinutes() / 60;
+  const np = pragueParts(natural);
+  const h = np.hour + np.minute / 60;
 
   if (h < startHour || h >= endHour) {
-    const effectiveMs = Math.max(0, endHour * 60 - offsetMinutes) * 60000;
-    const base = new Date(h < startHour
-      ? new Date(eventStart).setDate(eventStart.getDate() - 1)
-      : eventStart.getTime());
-    base.setHours(0, 0, 0, 0);
-    return new Date(base.getTime() + effectiveMs);
+    // Základní den = den prohlídky v Praze; pokud je notifikace moc brzy ráno,
+    // posuneme na předchozí den.
+    const ep = pragueParts(eventStart);
+    let { year, month, day } = ep;
+    if (h < startHour) {
+      // 1 h před pražskou půlnocí = předchozí kalendářní den
+      const prevDay = pragueParts(new Date(pragueWallToUtc(year, month, day, 0, 0).getTime() - 3600 * 1000));
+      year = prevDay.year; month = prevDay.month; day = prevDay.day;
+    }
+    const totalMin = Math.max(0, endHour * 60 - offsetMinutes);
+    return pragueWallToUtc(year, month, day, Math.floor(totalMin / 60), Math.round(totalMin % 60));
   }
 
   return natural;
