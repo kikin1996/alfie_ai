@@ -11,3 +11,7 @@ create table if not exists public.credit_topups (
 );
 
 create index if not exists credit_topups_user_id_idx on public.credit_topups(user_id);
+
+-- RLS zapnuté bez policies: klienti (anon/authenticated) nemají přístup,
+-- zapisuje/čte jen server přes service-role klíč (ten RLS obchází).
+alter table public.credit_topups enable row level security;
