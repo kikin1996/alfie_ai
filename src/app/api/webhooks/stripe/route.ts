@@ -27,6 +27,36 @@ export async function POST(request: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.user_id;
     const planId = session.metadata?.plan_id;
+
+    // Jednorázové přikoupení kreditů (top-up) – přičíst ke zbývajícím kreditům
+    if (session.mode === "payment" || session.metadata?.type === "credit_topup") {
+      const credits = parseInt(session.metadata?.credits ?? "0", 10);
+      if (!userId || !Number.isFinite(credits) || credits <= 0) {
+        return NextResponse.json({ ok: true, skipped: true });
+      }
+      // Idempotence: zapsat top-up podle stripe session id (unikátní).
+      // Když už existuje (Stripe webhook zopakoval), kredity nepřičítat znovu.
+      const { error: insErr } = await supabaseAdmin.from("credit_topups").insert({
+        user_id: userId,
+        stripe_session_id: session.id,
+        credits,
+        amount_czk: parseInt(session.metadata?.amount_czk ?? "0", 10) || null,
+      });
+      if (insErr) {
+        return NextResponse.json({ ok: true, duplicate: true });
+      }
+      const { data: sub } = await supabaseAdmin
+        .from("user_subscriptions")
+        .select("credits_remaining")
+        .eq("user_id", userId)
+        .maybeSingle();
+      const current = sub?.credits_remaining ?? 0;
+      await supabaseAdmin
+        .from("user_subscriptions")
+        .update({ credits_remaining: current + credits, updated_at: new Date().toISOString() })
+        .eq("user_id", userId);
+      return NextResponse.json({ ok: true, topup: credits });
+    }
     const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
     const stripeSubId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
 

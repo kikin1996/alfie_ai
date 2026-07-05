@@ -9,8 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, CheckCircle2, CreditCard, Zap, Building2, ExternalLink } from "lucide-react";
+import { Loader2, CheckCircle2, CreditCard, Zap, Building2, ExternalLink, Plus } from "lucide-react";
 import type { SubscriptionPlan, UserSubscription } from "@/types";
+import { CREDIT_PACKS } from "@/lib/creditPacks";
 
 function PlanIcon({ planId }: { planId: string }) {
   if (planId === "business") return <Building2 className="h-6 w-6" />;
@@ -42,6 +43,7 @@ function SubscriptionPageInner() {
 
   const successParam = searchParams?.get("success");
   const cancelledParam = searchParams?.get("cancelled");
+  const topupParam = searchParams?.get("topup");
 
   useEffect(() => {
     async function load() {
@@ -73,6 +75,30 @@ function SubscriptionPageInner() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error ?? "Chyba při vytváření platby.");
+        setRedirecting(null);
+        return;
+      }
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch {
+      setError("Nepodařilo se spustit platbu.");
+      setRedirecting(null);
+    }
+  };
+
+  const handleBuyCredits = async (packId: string) => {
+    if (redirecting) return;
+    setRedirecting(packId);
+    setError(null);
+    try {
+      const res = await fetch("/api/stripe/checkout-credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ packId }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -138,6 +164,11 @@ function SubscriptionPageInner() {
           Platba byla zrušena. Můžete to zkusit znovu kdykoliv.
         </div>
       )}
+      {topupParam && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+          Platba proběhla úspěšně. Kredity budou přičteny během pár sekund.
+        </div>
+      )}
 
       {/* Stav kreditů */}
       {subscription && (
@@ -183,6 +214,57 @@ function SubscriptionPageInner() {
         <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
+      )}
+
+      {/* Přikoupení kreditů – POUZE pro aktivní předplatné */}
+      {subscription?.status === "active" && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Přikoupit kredity</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Došly vám kredity dřív, než se předplatné obnoví? Dokupte si je jednorázově.
+              Přičtou se k vašim stávajícím kreditům.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {CREDIT_PACKS.map((pack) => {
+                const pricePerCredit = (pack.priceCzk / pack.credits).toFixed(2).replace(".", ",");
+                return (
+                  <div
+                    key={pack.id}
+                    className={`relative flex flex-col rounded-xl border p-4 ${pack.popular ? "border-primary ring-1 ring-primary" : "border-border"}`}
+                  >
+                    {pack.popular && (
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground">
+                        Nejoblíbenější
+                      </span>
+                    )}
+                    <p className="text-lg font-bold text-foreground">{pack.credits} kreditů</p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="font-semibold text-foreground">{pack.priceCzk} Kč</span>
+                      <span> · {pricePerCredit} Kč / kredit</span>
+                    </p>
+                    <Button
+                      className="mt-3 w-full"
+                      size="sm"
+                      variant={pack.popular ? "default" : "outline"}
+                      disabled={redirecting !== null}
+                      onClick={() => handleBuyCredits(pack.id)}
+                    >
+                      {redirecting === pack.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Plus className="h-4 w-4 mr-2" />
+                      )}
+                      Koupit
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Plány */}
