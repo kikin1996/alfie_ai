@@ -867,17 +867,19 @@ export default function DashboardPage() {
     );
   }
 
-  const upcoming = viewings.filter(
-    (v) => new Date(v.eventStart) >= new Date() && v.status !== "cancelled"
-  );
-  // Zrušené prohlídky zůstávají na dashboardu CELÝ DEN, kdy měly proběhnout –
-  // makléř tak celý den vidí, co se zrušilo. (fetchViewings načítá jen dnešek+,
-  // takže druhý den spadnou do historie.)
+  // Jeden seznam seřazený podle času: aktivní budoucí prohlídky (>= teď) +
+  // zrušené celý den (>= začátek dneška). Zrušené se tak zobrazí NA SVÉM MÍSTĚ
+  // podle času mezi ostatními, ne zvlášť dole.
+  const now = new Date();
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
-  const cancelledUpcoming = viewings.filter(
-    (v) => v.status === "cancelled" && new Date(v.eventStart) >= startOfToday
-  );
+  const upcoming = viewings
+    .filter((v) =>
+      v.status === "cancelled"
+        ? new Date(v.eventStart) >= startOfToday
+        : new Date(v.eventStart) >= now
+    )
+    .sort((a, b) => new Date(a.eventStart).getTime() - new Date(b.eventStart).getTime());
 
   return (
     <div className="p-6">
@@ -1025,16 +1027,6 @@ export default function DashboardPage() {
               <div className="grid gap-3">
                 {upcoming.map((v) => (
                   <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} smsSettings={smsSettings} />
-                ))}
-              </div>
-            </section>
-          )}
-          {cancelledUpcoming.length > 0 && (
-            <section>
-              <h2 className="text-lg font-medium text-muted-foreground mb-3">Zrušené</h2>
-              <div className="grid gap-3">
-                {cancelledUpcoming.map((v) => (
-                  <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} isPast smsSettings={smsSettings} />
                 ))}
               </div>
             </section>
