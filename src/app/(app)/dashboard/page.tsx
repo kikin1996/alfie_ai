@@ -870,10 +870,13 @@ export default function DashboardPage() {
   const upcoming = viewings.filter(
     (v) => new Date(v.eventStart) >= new Date() && v.status !== "cancelled"
   );
-  // Zrušené prohlídky zůstávají na dashboardu, dokud nepřejde jejich původní čas –
-  // makléř tak vidí, co bylo dnes zrušeno. Po uplynutí času spadnou do historie.
+  // Zrušené prohlídky zůstávají na dashboardu CELÝ DEN, kdy měly proběhnout –
+  // makléř tak celý den vidí, co se zrušilo. (fetchViewings načítá jen dnešek+,
+  // takže druhý den spadnou do historie.)
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
   const cancelledUpcoming = viewings.filter(
-    (v) => new Date(v.eventStart) >= new Date() && v.status === "cancelled"
+    (v) => v.status === "cancelled" && new Date(v.eventStart) >= startOfToday
   );
 
   return (
