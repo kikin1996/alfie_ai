@@ -76,11 +76,17 @@ export async function initiateVapiCall(opts: {
         startTime,
       },
       assistantOverrides: {
+        // Přímý override – přebije pole asistenta úplně, nezávisí na dosazení
+        // proměnných {{firstMessage}}/{{systemPrompt}}. Tím se definitivně vyřeší
+        // "start time" místo reálného času.
+        firstMessage,
+        model: {
+          messages: [{ role: "system", content: systemPrompt }],
+        },
         variableValues: {
-          // Hlavní proměnné, které asistent používá:
+          // Záloha, kdyby prompt asistenta používal proměnné:
           firstMessage,
           systemPrompt,
-          // Doplňkové (kdyby je prompt používal jednotlivě):
           brokerName: opts.brokerName ?? "",
           brokerPhone: opts.brokerPhone ?? "",
           agencyName: opts.agencyName ?? "",
