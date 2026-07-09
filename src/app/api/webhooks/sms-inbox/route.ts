@@ -151,16 +151,17 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
   const newStatus =
     intent === "confirmed" ? "confirmed" : intent === "declined" ? "cancelled" : null;
 
-  if (newStatus) {
-    await supabaseAdmin
-      .from("viewings")
-      .update({
+  await supabaseAdmin
+    .from("viewings")
+    .update({
+      ...(newStatus ? {
         status: newStatus,
         confirmed_at: newStatus === "confirmed" ? new Date().toISOString() : null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", viewing.id);
-  }
+      } : {}),
+      client_reply: message,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", viewing.id);
 
   // Telegram notifikace brokerovi
   const { data: settings } = await supabaseAdmin

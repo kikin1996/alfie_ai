@@ -26,6 +26,7 @@ export interface Viewing {
   vapiCallId?: string
   vapiSummary?: string
   vapiTranscript?: string
+  clientReply?: string
   sms2hEnabled: boolean
   sms1hEnabled: boolean
   vapiEnabled: boolean

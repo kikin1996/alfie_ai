@@ -116,15 +116,32 @@ export default function HistoryPage() {
       setLoading(false);
       return;
     }
-    // Vše, co už proběhlo (čas < teď) NEBO je zrušené – ať dnešní proběhlé
-    // prohlídky nezmizí z dashboardu i historie (mezera mezi "teď" a půlnocí).
     const nowIso = new Date().toISOString();
-    const { data } = await supabase
-      .from("viewings")
-      .select("*")
-      .eq("user_id", user.id)
-      .or(`event_start.lt.${nowIso},status.eq.cancelled`)
-      .order("event_start", { ascending: false });
+    const [{ data: pastData }, { data: cancelledData }] = await Promise.all([
+      supabase
+        .from("viewings")
+        .select("*")
+        .eq("user_id", user.id)
+        .lt("event_start", nowIso)
+        .order("event_start", { ascending: false }),
+      supabase
+        .from("viewings")
+        .select("*")
+        .eq("user_id", user.id)
+        .eq("status", "cancelled")
+        .gte("event_start", nowIso)
+        .order("event_start", { ascending: false }),
+    ]);
+
+    const merged = [...(pastData ?? []), ...(cancelledData ?? [])];
+    const seen = new Set<string>();
+    const data = merged.filter((r) => {
+      if (seen.has(r.id as string)) return false;
+      seen.add(r.id as string);
+      return true;
+    }).sort((a, b) =>
+      new Date(b.event_start as string).getTime() - new Date(a.event_start as string).getTime()
+    );
 
     const rows = (data as Record<string, unknown>[]) ?? [];
     setViewings(
@@ -145,6 +162,7 @@ export default function HistoryPage() {
         vapiCallId: (r.vapi_call_id as string) ?? undefined,
         vapiSummary: (r.vapi_summary as string) ?? undefined,
         vapiTranscript: (r.vapi_transcript as string) ?? undefined,
+        clientReply: (r.client_reply as string) ?? undefined,
         sms2hEnabled: (r.sms2h_enabled as boolean) ?? true,
         sms1hEnabled: (r.sms1h_enabled as boolean) ?? true,
         vapiEnabled: (r.vapi_enabled as boolean) ?? true,
@@ -242,10 +260,10 @@ export default function HistoryPage() {
                       initialTranscript={v.vapiTranscript}
                     />
                   )}
-                  {smsSent && smsSettings && (
+                  {v.clientReply && (
                     <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">
-                      <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Text odeslané SMS:</p>
-                      <p>{buildSmsText(v, smsSettings)}</p>
+                      <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Odpověď klienta:</p>
+                      <p className="text-foreground">{v.clientReply}</p>
                     </div>
                   )}
                 </CardContent>

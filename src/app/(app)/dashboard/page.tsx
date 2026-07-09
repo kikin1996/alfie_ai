@@ -567,22 +567,12 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
                 )}
               </div>
             )}
-            {(viewing.sms2hSent || viewing.sms1hSent || viewing.status === "cancelled" || viewing.status === "confirmed") && smsSettings && (() => {
-              const timeStr = new Date(viewing.eventStart).toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
-              const text = withCode(smsSettings.smsTemplate
-                .replace(/\{address\}/g, viewing.address || "")
-                .replace(/\{time\}/g, timeStr)
-                .replace(/\{clientName\}/g, viewing.clientName || "Klient")
-                .replace(/\{brokerName\}/g, smsSettings.brokerName)
-                .replace(/\{brokerPhone\}/g, smsSettings.brokerPhone)
-                .replace(/\{agencyName\}/g, smsSettings.agencyName), shortCode(viewing.id));
-              return (
-                <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">
-                  <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Text odeslané SMS:</p>
-                  <p>{text}</p>
-                </div>
-              );
-            })()}
+            {viewing.clientReply && (
+              <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">
+                <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Odpověď klienta:</p>
+                <p className="text-foreground">{viewing.clientReply}</p>
+              </div>
+            )}
           </>
         )}
 
@@ -784,6 +774,7 @@ export default function DashboardPage() {
         vapiCallId: (r.vapi_call_id as string) ?? undefined,
         vapiSummary: (r.vapi_summary as string) ?? undefined,
         vapiTranscript: (r.vapi_transcript as string) ?? undefined,
+        clientReply: (r.client_reply as string) ?? undefined,
         sms2hEnabled: (r.sms2h_enabled as boolean) ?? true,
         sms1hEnabled: (r.sms1h_enabled as boolean) ?? true,
         vapiEnabled: (r.vapi_enabled as boolean) ?? true,

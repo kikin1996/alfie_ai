@@ -5,10 +5,6 @@ import Anthropic from "@anthropic-ai/sdk";
 
 type Intent = "confirmed" | "declined" | "uncertain";
 
-/**
- * Klasifikace výsledku hovoru přes Claude (spolehlivé pro češtinu vč. negací).
- * Fallback (bez API klíče) řeší negace tak, že NEJDŘÍV hledá odmítnutí.
- */
 async function classifyCall(transcript: string, summary: string): Promise<Intent> {
   const text = `${transcript}\n${summary}`.trim();
   if (!text) return "uncertain";
@@ -16,7 +12,6 @@ async function classifyCall(transcript: string, summary: string): Promise<Intent
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     const t = text.toLowerCase();
-    // Odmítnutí kontrolovat první (kvůli negacím "nepřijdu" obsahuje "přijdu")
     if (/(nepřijd|neprijd|nedoraz|nezúčast|nezucast|nebudu|nemůž|nemuz|zruš|zrus|bohužel|bohuzel|nestih)/.test(t)) return "declined";
     if (/(přijd|prijd|doraz|potvrz|\bano\b|budu tam|zúčastn|zucastn|jasně|jasne|souhlas)/.test(t)) return "confirmed";
     return "uncertain";
@@ -81,6 +76,7 @@ export async function POST(request: NextRequest) {
   const summary = (analysis.summary as string) ?? "";
   const eventId = (metadata.event_id as string) ?? "";
   const phoneE164 = ((d.customer as Record<string, unknown>)?.number as string) ?? "";
+  const callId = ((d.call as Record<string, unknown>)?.id as string) ?? (d.id as string) ?? "";
   const callStatus = (d.status as string) ?? (d.type as string) ?? "";
 
   // Zpracovat jen ukončené hovory / závěrečnou zprávu
@@ -111,12 +107,13 @@ export async function POST(request: NextRequest) {
       .eq("id", eventId)
       .maybeSingle();
     viewing = data ?? undefined;
-  } else {
+  }
+  if (!viewing && phoneE164) {
     const { data: rows } = await supabaseAdmin
       .from("viewings")
       .select("id, user_id, client_name, address, event_start")
       .eq("client_phone", phoneE164)
-      .eq("status", "sms_sent")
+      .in("status", ["sms_sent", "pending"])
       .order("event_start", { ascending: true })
       .limit(1);
     viewing = rows?.[0] ?? undefined;
@@ -128,13 +125,12 @@ export async function POST(request: NextRequest) {
 
   const intent = await classifyCall(transcript, summary);
 
-  // Uložit shrnutí + přepis (ať se zobrazí v kartě). Status měnit JEN u jasného výsledku –
-  // při "uncertain" schůzku NErušíme, jen brokera upozorníme.
   const update: Record<string, unknown> = {
     vapi_summary: summary || null,
     vapi_transcript: transcript || null,
     updated_at: new Date().toISOString(),
   };
+  if (callId) update.vapi_call_id = callId;
   if (intent === "confirmed") {
     update.status = "confirmed";
     update.confirmed_at = new Date().toISOString();
