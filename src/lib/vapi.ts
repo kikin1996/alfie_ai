@@ -47,13 +47,15 @@ export async function initiateVapiCall(opts: {
     `Chtěl bych ověřit, jestli termín platí a dorazíte. Můžete mi to prosím potvrdit?`;
 
   const systemPrompt =
-    `Jsi zdvořilý telefonní asistent realitní kanceláře ${agencyName}. ` +
-    `Voláš klientovi jménem ${clientName} kvůli připomenutí a potvrzení prohlídky nemovitosti. ` +
-    `Detaily prohlídky – adresa: ${address || "neuvedena"}; termín: ${startDate} v ${startTime}. ` +
-    `Tvým úkolem je ověřit, zda klient na prohlídku dorazí. ` +
-    `Když potvrdí, poděkuj a rozluč se. Když nemůže nebo chce zrušit, zdvořile to potvrď` +
-    `${opts.brokerName || opts.brokerPhone ? ` a případně předej kontakt na makléře ${opts.brokerName ?? ""} ${opts.brokerPhone ?? ""}`.trimEnd() : ""}. ` +
-    `Mluv česky, stručně, přátelsky a přirozeně. Nevymýšlej si žádné informace nad rámec zadání.`;
+    `Jsi telefonní asistent realitní kanceláře ${agencyName}. Vedeš ŽIVÝ telefonní hovor s klientem.\n\n` +
+    `KONTEXT: Voláš klientovi ${clientName} ohledně prohlídky nemovitosti na adrese ${address || "neuvedena"}, která je naplánována ${startDate} v ${startTime}.\n\n` +
+    `PRŮBĚH HOVORU:\n` +
+    `1. Úvodní větu jsi již řekl(a). Nyní ČEKEJ na odpověď klienta.\n` +
+    `2. Když klient odpoví, reaguj přirozeně a konverzuj.\n` +
+    `3. Pokud POTVRDÍ účast: poděkuj a rozluč se.\n` +
+    `4. Pokud ODMÍTNE nebo chce zrušit: zdvořile to přijmi, případně předej kontakt na makléře${opts.brokerName ? ` ${opts.brokerName}` : ""}${opts.brokerPhone ? ` (${opts.brokerPhone})` : ""}.\n` +
+    `5. Pokud je nejasná odpověď: zeptej se znovu stručně.\n\n` +
+    `DŮLEŽITÉ: Toto je skutečný telefonní hovor. Po každé větě POČKEJ na reakci klienta. Nepokračuj sám od sebe. Mluv česky, krátce a přirozeně.`;
 
   const res = await fetch("https://api.vapi.ai/call", {
     method: "POST",
@@ -80,9 +82,6 @@ export async function initiateVapiCall(opts: {
         maxDurationSeconds: 300,
         silenceTimeoutSeconds: 30,
         endCallFunctionEnabled: false,
-        model: {
-          messages: [{ role: "system", content: systemPrompt }],
-        },
         variableValues: {
           firstMessage,
           systemPrompt,
