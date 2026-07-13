@@ -52,10 +52,14 @@ export async function initiateVapiCall(opts: {
     `PRŮBĚH HOVORU:\n` +
     `1. Úvodní větu jsi již řekl(a). Nyní ČEKEJ na odpověď klienta.\n` +
     `2. Když klient odpoví, reaguj přirozeně a konverzuj.\n` +
-    `3. Pokud POTVRDÍ účast: poděkuj a rozluč se.\n` +
-    `4. Pokud ODMÍTNE nebo chce zrušit: zdvořile to přijmi, případně předej kontakt na makléře${opts.brokerName ? ` ${opts.brokerName}` : ""}${opts.brokerPhone ? ` (${opts.brokerPhone})` : ""}.\n` +
+    `3. Pokud POTVRDÍ účast: řekni "Výborně, děkuji za potvrzení! Těšíme se na viděnou na prohlídce. Na shledanou!" a TEPRVE POTOM ukonči hovor.\n` +
+    `4. Pokud ODMÍTNE nebo chce zrušit: řekni "Dobře, rozumím. Prohlídku tedy rušíme.${opts.brokerName || opts.brokerPhone ? ` Pokud byste si to rozmyslel(a), kontaktujte nás na ${opts.brokerName ?? ""}${opts.brokerPhone ? ` (${opts.brokerPhone})` : ""}.` : ""} Na shledanou!" a TEPRVE POTOM ukonči hovor.\n` +
     `5. Pokud je nejasná odpověď: zeptej se znovu stručně.\n\n` +
-    `DŮLEŽITÉ: Toto je skutečný telefonní hovor. Po každé větě POČKEJ na reakci klienta. Nepokračuj sám od sebe. Mluv česky, krátce a přirozeně.`;
+    `KRITICKY DŮLEŽITÉ:\n` +
+    `- Po každé větě POČKEJ na reakci klienta\n` +
+    `- VŽDY řekni celou rozlučovací větu PŘED ukončením hovoru\n` +
+    `- Nikdy neukončuj hovor uprostřed věty\n` +
+    `- Mluv česky, krátce a přirozeně`;
 
   const res = await fetch("https://api.vapi.ai/call", {
     method: "POST",
@@ -81,7 +85,6 @@ export async function initiateVapiCall(opts: {
         firstMessage,
         maxDurationSeconds: 300,
         silenceTimeoutSeconds: 30,
-        endCallFunctionEnabled: false,
         variableValues: {
           firstMessage,
           systemPrompt,
