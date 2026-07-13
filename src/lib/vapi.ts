@@ -74,7 +74,7 @@ export async function initiateVapiCall(opts: {
       type: "outboundPhoneCall",
       assistantId: opts.assistantId,
       phoneNumberId: opts.phoneNumberId,
-      ...(webhookUrl ? { server: { url: webhookUrl } } : {}),
+      ...(webhookUrl ? { serverUrl: webhookUrl } : {}),
       customer: {
         number: toE164(opts.number),
         name: opts.name,

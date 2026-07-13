@@ -87,21 +87,28 @@ export async function POST(
       return NextResponse.json({ error: "VAPI není nakonfigurováno v nastavení" }, { status: 400 });
     }
     const testNumber = userSettings?.broker_phone || viewing.client_phone;
-    const callId = await initiateVapiCall({
-      apiKey: vapiApiKey,
-      assistantId: vapiAssistantId,
-      phoneNumberId: vapiPhoneNumberId,
-      number: testNumber,
-      name,
-      eventId: viewing.id,
-      address: viewing.address,
-      startISO: eventStart.toISOString(),
-      brokerName: userSettings?.broker_name ?? "",
-      brokerPhone: userSettings?.broker_phone ?? "",
-      agencyName: userSettings?.agency_name ?? "",
-      minutesBefore: appConfig?.vapi_minutes_before ?? 30,
-    }).catch(() => null);
-    if (!callId) return NextResponse.json({ error: "Hovor se nepodařilo spustit" }, { status: 500 });
+    let callId: string | null = null;
+    let vapiError = "";
+    try {
+      callId = await initiateVapiCall({
+        apiKey: vapiApiKey,
+        assistantId: vapiAssistantId,
+        phoneNumberId: vapiPhoneNumberId,
+        number: testNumber,
+        name,
+        eventId: viewing.id,
+        address: viewing.address,
+        startISO: eventStart.toISOString(),
+        brokerName: userSettings?.broker_name ?? "",
+        brokerPhone: userSettings?.broker_phone ?? "",
+        agencyName: userSettings?.agency_name ?? "",
+        minutesBefore: appConfig?.vapi_minutes_before ?? 30,
+      });
+    } catch (e) {
+      vapiError = e instanceof Error ? e.message : String(e);
+      console.error("[trigger/vapi] initiateVapiCall error:", vapiError);
+    }
+    if (!callId) return NextResponse.json({ error: `Hovor se nepodařilo spustit: ${vapiError}` }, { status: 500 });
     return NextResponse.json({ ok: true, message: `Hovor zahájen (${callId})` });
   }
 }
