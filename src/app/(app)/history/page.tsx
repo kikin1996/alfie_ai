@@ -116,20 +116,22 @@ export default function HistoryPage() {
       setLoading(false);
       return;
     }
-    const nowIso = new Date().toISOString();
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const startOfTodayIso = startOfToday.toISOString();
     const [{ data: pastData }, { data: cancelledData }] = await Promise.all([
       supabase
         .from("viewings")
         .select("*")
         .eq("user_id", user.id)
-        .lt("event_start", nowIso)
+        .lt("event_start", startOfTodayIso)
         .order("event_start", { ascending: false }),
       supabase
         .from("viewings")
         .select("*")
         .eq("user_id", user.id)
         .eq("status", "cancelled")
-        .gte("event_start", nowIso)
+        .gte("event_start", startOfTodayIso)
         .order("event_start", { ascending: false }),
     ]);
 

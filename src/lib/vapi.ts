@@ -77,9 +77,6 @@ export async function initiateVapiCall(opts: {
       },
       assistantOverrides: {
         firstMessage,
-        model: {
-          systemPrompt,
-        },
         variableValues: {
           firstMessage,
           systemPrompt,

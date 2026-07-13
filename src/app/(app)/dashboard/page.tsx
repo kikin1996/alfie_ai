@@ -866,9 +866,7 @@ export default function DashboardPage() {
   startOfToday.setHours(0, 0, 0, 0);
   const upcoming = viewings
     .filter((v) =>
-      v.status === "cancelled"
-        ? new Date(v.eventStart) >= startOfToday
-        : new Date(v.eventStart) >= now
+      v.status !== "cancelled" && new Date(v.eventStart) >= startOfToday
     )
     .sort((a, b) => new Date(a.eventStart).getTime() - new Date(b.eventStart).getTime());
 
