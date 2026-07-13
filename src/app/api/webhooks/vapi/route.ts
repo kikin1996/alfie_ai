@@ -73,7 +73,19 @@ export async function POST(request: NextRequest) {
         .join("\n");
     }
   }
-  const summary = (analysis.summary as string) ?? "";
+  const structuredData = (analysis.structuredData ?? {}) as Record<string, unknown>;
+  const summary = (structuredData["Call Summary"] as string)
+    ?? (analysis.summary as string)
+    ?? "";
+  // Pokud VAPI vrátí bool evalaci, použij ji jako nápovědu
+  const successEvalRaw = structuredData["Success Evaluation - Pass/Fail"];
+  const vapiSuccess: boolean | undefined =
+    successEvalRaw === true || successEvalRaw === "true"
+      ? true
+      : successEvalRaw === false || successEvalRaw === "false"
+      ? false
+      : undefined;
+
   const eventId = (metadata.event_id as string) ?? "";
   const phoneE164 = ((d.customer as Record<string, unknown>)?.number as string) ?? "";
   const callId = ((d.call as Record<string, unknown>)?.id as string) ?? (d.id as string) ?? "";
@@ -123,7 +135,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, message: "Viewing not found" });
   }
 
-  const intent = await classifyCall(transcript, summary);
+  // Pokud VAPI structured output vrátí jasnou evalaci, bereme ji přímo
+  let intent: Intent;
+  if (vapiSuccess === true && !transcript.toLowerCase().includes("nepřijdu")) {
+    intent = "confirmed";
+  } else if (vapiSuccess === false && !transcript.toLowerCase().includes("přijdu")) {
+    intent = "declined";
+  } else {
+    intent = await classifyCall(transcript, summary);
+  }
 
   const update: Record<string, unknown> = {
     vapi_summary: summary || null,
