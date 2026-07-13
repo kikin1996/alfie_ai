@@ -61,6 +61,9 @@ export async function initiateVapiCall(opts: {
     `- Nikdy neukončuj hovor uprostřed věty\n` +
     `- Mluv česky, krátce a přirozeně`;
 
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  const webhookUrl = appUrl ? `${appUrl}/api/webhooks/vapi` : null;
+
   const res = await fetch("https://api.vapi.ai/call", {
     method: "POST",
     headers: {
@@ -71,6 +74,7 @@ export async function initiateVapiCall(opts: {
       type: "outboundPhoneCall",
       assistantId: opts.assistantId,
       phoneNumberId: opts.phoneNumberId,
+      ...(webhookUrl ? { server: { url: webhookUrl } } : {}),
       customer: {
         number: toE164(opts.number),
         name: opts.name,
