@@ -77,6 +77,12 @@ export async function initiateVapiCall(opts: {
       },
       assistantOverrides: {
         firstMessage,
+        maxDurationSeconds: 300,
+        silenceTimeoutSeconds: 30,
+        endCallFunctionEnabled: false,
+        model: {
+          messages: [{ role: "system", content: systemPrompt }],
+        },
         variableValues: {
           firstMessage,
           systemPrompt,
