@@ -13,7 +13,7 @@ async function classifyCall(transcript: string, summary: string): Promise<Intent
   if (!apiKey) {
     const t = text.toLowerCase();
     if (/(nepřijd|neprijd|nedoraz|nezúčast|nezucast|nebudu|nemůž|nemuz|zruš|zrus|bohužel|bohuzel|nestih)/.test(t)) return "declined";
-    if (/(přijd|prijd|doraz|potvrz|\bano\b|budu tam|zúčastn|zucastn|jasně|jasne|souhlas)/.test(t)) return "confirmed";
+    if (/(přijd|prijd|dojd|doraz|potvrz|\bano\b|\bjo\b|budu tam|budu|zúčastn|zucastn|jasně|jasne|souhlas|platí|plati)/.test(t)) return "confirmed";
     return "uncertain";
   }
 
@@ -130,11 +130,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, message: "Viewing not found" });
   }
 
-  const intent = await classifyCall(transcript, summary);
+  // Pojistka: když payload nemá transkript/shrnutí, dotáhni je přímo z VAPI
+  // (autoritativní zdroj) podle callId. Bez textu by klasifikace vždy vyšla
+  // "uncertain" a potvrzení "dojdu" by se nikam nezapsalo.
+  let finalTranscript = transcript;
+  let finalSummary = summary;
+  if ((!finalTranscript || !finalSummary) && callId) {
+    const { data: appConfig } = await supabaseAdmin
+      .from("app_config").select("vapi_api_key").eq("id", 1).maybeSingle();
+    const key = appConfig?.vapi_api_key;
+    if (key) {
+      try {
+        const r = await fetch(`https://api.vapi.ai/call/${callId}`, { headers: { Authorization: `Bearer ${key}` } });
+        if (r.ok) {
+          const cd = await r.json();
+          finalSummary = finalSummary || cd.analysis?.summary || "";
+          if (!finalTranscript) {
+            finalTranscript = cd.artifact?.transcript || cd.transcript || "";
+            const msgs = (cd.artifact?.messages ?? cd.messages ?? []) as { role?: string; message?: string; content?: string }[];
+            if (!finalTranscript && msgs.length) {
+              finalTranscript = msgs
+                .filter((m) => m.role && (m.message || m.content))
+                .map((m) => `${m.role === "bot" || m.role === "assistant" ? "Asistent" : "Klient"}: ${m.message ?? m.content}`)
+                .join("\n");
+            }
+          }
+        }
+      } catch { /* necháme, co máme z payloadu */ }
+    }
+  }
+
+  const intent = await classifyCall(finalTranscript, finalSummary);
 
   const update: Record<string, unknown> = {
-    vapi_summary: summary || null,
-    vapi_transcript: transcript || null,
+    vapi_summary: finalSummary || null,
+    vapi_transcript: finalTranscript || null,
     vapi_called: true,
     updated_at: new Date().toISOString(),
   };
@@ -161,7 +191,7 @@ export async function POST(request: NextRequest) {
     await notify(
       settings,
       `Výsledek hovoru – ${viewing.client_name || phoneE164}`,
-      `📞 AI hovor ukončen: ${viewing.client_name || phoneE164}\n📍 ${viewing.address}\n🕐 ${time}\n→ ${label}${summary ? `\n📝 ${summary}` : ""}`
+      `📞 AI hovor ukončen: ${viewing.client_name || phoneE164}\n📍 ${viewing.address}\n🕐 ${time}\n→ ${label}${finalSummary ? `\n📝 ${finalSummary}` : ""}`
     );
   }
 

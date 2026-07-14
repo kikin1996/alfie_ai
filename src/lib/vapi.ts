@@ -69,8 +69,10 @@ export async function initiateVapiCall(opts: {
     `- Nikdy neukončuj hovor uprostřed věty\n` +
     `- Mluv česky, krátce a přirozeně`;
 
-  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
-  const webhookUrl = appUrl ? `${appUrl}/api/webhooks/vapi` : null;
+  // Fallback na produkční doménu – bez server.url by VAPI neměl kam poslat výsledek
+  // hovoru a potvrzení/zrušení by se nikam nezapsalo.
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL || "https://www.renote.cz").replace(/\/$/, "");
+  const webhookUrl = `${appUrl}/api/webhooks/vapi`;
 
   const res = await fetch("https://api.vapi.ai/call", {
     method: "POST",
