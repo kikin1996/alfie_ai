@@ -116,34 +116,17 @@ export default function HistoryPage() {
       setLoading(false);
       return;
     }
+    // JEN události z minulých dní (včerejšek a starší). Dnešní prohlídky – včetně
+    // zrušených – zůstávají na dashboardu celý den, sem spadnou až druhý den.
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const startOfTodayIso = startOfToday.toISOString();
-    const [{ data: pastData }, { data: cancelledData }] = await Promise.all([
-      supabase
-        .from("viewings")
-        .select("*")
-        .eq("user_id", user.id)
-        .lt("event_start", startOfTodayIso)
-        .order("event_start", { ascending: false }),
-      supabase
-        .from("viewings")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("status", "cancelled")
-        .gte("event_start", startOfTodayIso)
-        .order("event_start", { ascending: false }),
-    ]);
-
-    const merged = [...(pastData ?? []), ...(cancelledData ?? [])];
-    const seen = new Set<string>();
-    const data = merged.filter((r) => {
-      if (seen.has(r.id as string)) return false;
-      seen.add(r.id as string);
-      return true;
-    }).sort((a, b) =>
-      new Date(b.event_start as string).getTime() - new Date(a.event_start as string).getTime()
-    );
+    const { data } = await supabase
+      .from("viewings")
+      .select("*")
+      .eq("user_id", user.id)
+      .lt("event_start", startOfTodayIso)
+      .order("event_start", { ascending: false });
 
     const rows = (data as Record<string, unknown>[]) ?? [];
     setViewings(
@@ -212,8 +195,8 @@ export default function HistoryPage() {
         <div className="flex items-center gap-2">
           <History className="h-7 w-7 text-navy" />
           <div>
-            <h1 className="text-2xl font-display font-semibold text-navy">Minulé / zrušené</h1>
-            <p className="text-muted-foreground text-sm">Přehled proběhlých a zrušených prohlídek.</p>
+            <h1 className="text-2xl font-display font-semibold text-navy">Minulé</h1>
+            <p className="text-muted-foreground text-sm">Přehled proběhlých prohlídek z minulých dní.</p>
           </div>
         </div>
       </div>

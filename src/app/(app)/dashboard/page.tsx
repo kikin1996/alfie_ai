@@ -858,16 +858,14 @@ export default function DashboardPage() {
     );
   }
 
-  // Jeden seznam seřazený podle času: aktivní budoucí prohlídky (>= teď) +
-  // zrušené celý den (>= začátek dneška). Zrušené se tak zobrazí NA SVÉM MÍSTĚ
-  // podle času mezi ostatními, ne zvlášť dole.
-  const now = new Date();
+  // Jeden seznam seřazený podle času – všechny dnešní i budoucí prohlídky VČETNĚ
+  // zrušených. Zrušená tak zůstane celý den mezi ostatními na svém místě podle
+  // času (s badge "Zrušeno"), makléř celý den vidí, že se zrušila. Druhý den
+  // spadne do "Minulé".
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const upcoming = viewings
-    .filter((v) =>
-      v.status !== "cancelled" && new Date(v.eventStart) >= startOfToday
-    )
+    .filter((v) => new Date(v.eventStart) >= startOfToday)
     .sort((a, b) => new Date(a.eventStart).getTime() - new Date(b.eventStart).getTime());
 
   return (
@@ -898,7 +896,7 @@ export default function DashboardPage() {
           <Link href="/history">
             <Button variant="outline" size="sm">
               <History className="h-4 w-4 mr-2" />
-              Minulé / zrušené
+              Minulé
             </Button>
           </Link>
           <Button variant="outline" size="sm" onClick={syncCalendar} disabled={syncing}>
