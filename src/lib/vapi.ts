@@ -39,19 +39,27 @@ export async function initiateVapiCall(opts: {
   const agencyName = opts.agencyName || "realitní kancelář";
   const address = opts.address || "";
 
+  // Kolik minut zbývá do prohlídky (podle skutečného času, ne konfigurace)
+  const minutesToStart = Math.round((new Date(opts.startISO).getTime() - Date.now()) / 60000);
+  const isSoonToday = minutesToStart > 0 && minutesToStart <= 120;
+  // "za zhruba 30 minut" (zaokrouhleno na 5 min), jinak fallback na den+čas
+  const roundedMinutes = Math.max(5, Math.round(minutesToStart / 5) * 5);
+  const whenPhrase = isSoonToday
+    ? `dnes na prohlídku, kterou máte zhruba za ${roundedMinutes} minut`
+    : `na prohlídku, kterou máte naplánovanou na ${startDate} v ${startTime}`;
+
   // Asistent má First Message = {{firstMessage}} a System Prompt = {{systemPrompt}},
   // takže celý text hovoru skládáme tady a posíláme jako proměnné (s reálným časem).
   const firstMessage =
-    `Dobrý den, tady ${agencyName}. Volám kvůli připomenutí prohlídky nemovitosti` +
-    `${address ? ` na adrese ${address}` : ""}, kterou máte naplánovanou na ${startDate} v ${startTime}. ` +
-    `Chtěl bych ověřit, jestli termín platí a dorazíte. Můžete mi to prosím potvrdit?`;
+    `Dobrý den, volám Vám z ${agencyName}. ` +
+    `Chtěli bychom se jen ujistit, že dorazíte ${whenPhrase}. Můžu s Vámi počítat?`;
 
   const systemPrompt =
     `Jsi telefonní asistent realitní kanceláře ${agencyName}. Vedeš ŽIVÝ telefonní hovor s klientem.\n\n` +
-    `KONTEXT: Voláš klientovi ${clientName} ohledně prohlídky nemovitosti na adrese ${address || "neuvedena"}, která je naplánována ${startDate} v ${startTime}.\n\n` +
+    `KONTEXT: Voláš klientovi ${clientName} ohledně prohlídky nemovitosti na adrese ${address || "neuvedena"}, která je naplánována ${startDate} v ${startTime}. Do prohlídky zbývá zhruba ${minutesToStart > 0 ? minutesToStart : 0} minut.\n\n` +
     `PRŮBĚH HOVORU:\n` +
     `1. Úvodní větu jsi již řekl(a). Nyní ČEKEJ na odpověď klienta.\n` +
-    `2. Když klient odpoví, reaguj přirozeně a konverzuj.\n` +
+    `2. Když klient odpoví, reaguj přirozeně a konverzuj. Detaily (adresu, přesný čas) sám od sebe NEŘÍKEJ — řekni je jen když se klient zeptá. Adresa: ${address || "neuvedena"}. Čas: ${startDate} v ${startTime}.\n` +
     `3. Pokud POTVRDÍ účast: řekni "Výborně, děkuji za potvrzení! Těšíme se na viděnou na prohlídce. Na shledanou!" a TEPRVE POTOM ukonči hovor.\n` +
     `4. Pokud ODMÍTNE nebo chce zrušit: řekni "Dobře, rozumím. Prohlídku tedy rušíme.${opts.brokerName || opts.brokerPhone ? ` Pokud byste si to rozmyslel(a), kontaktujte nás na ${opts.brokerName ?? ""}${opts.brokerPhone ? ` (${opts.brokerPhone})` : ""}.` : ""} Na shledanou!" a TEPRVE POTOM ukonči hovor.\n` +
     `5. Pokud je nejasná odpověď: zeptej se znovu stručně.\n\n` +
