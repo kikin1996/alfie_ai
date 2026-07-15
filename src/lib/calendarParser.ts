@@ -91,15 +91,23 @@ export function isSuspiciousClientName(name: string): { suspicious: boolean; rea
   return { suspicious: false }
 }
 
+/** Rozdělí "prohlídka, prohlidka, viewing" na jednotlivá klíčová slova */
+export function splitKeywords(triggerKeyword: string): string[] {
+  return (triggerKeyword ?? "")
+    .split(",")
+    .map((k) => k.trim().toLowerCase())
+    .filter(Boolean)
+}
+
 export function eventMatchesTrigger(
   summary: string,
   description: string,
   triggerKeyword: string
 ): boolean {
-  const normalizedKeyword = triggerKeyword.trim().toLowerCase()
-  if (!normalizedKeyword) return false
+  const keywords = splitKeywords(triggerKeyword)
+  if (keywords.length === 0) return false
   const text = `${summary ?? ""} ${description ?? ""}`.toLowerCase()
-  return text.includes(normalizedKeyword)
+  return keywords.some((k) => text.includes(k))
 }
 
 export function parseCalendarEvent(
@@ -121,12 +129,12 @@ export function parseCalendarEvent(
   let address = adresaMatch ? adresaMatch[1].trim() : (location || "").trim()
 
   // Fallback: title like "Revoluční 2, Příbor, Petr Komárek, 777 726 001, #prohlidka"
-  const keyword = triggerKeyword.trim().toLowerCase()
+  const keywords = splitKeywords(triggerKeyword)
   const summaryParts = (summary || "")
     .split(",")
     .map((p) => p.trim())
     .filter(Boolean)
-    .filter((p) => (keyword ? !p.toLowerCase().includes(keyword) : true))
+    .filter((p) => !keywords.some((k) => p.toLowerCase().includes(k)))
 
   // Phone = part with 9+ digits
   const phoneIdx = summaryParts.findIndex((p) => p.replace(/\D/g, "").length >= 9)

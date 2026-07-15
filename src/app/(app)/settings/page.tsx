@@ -48,7 +48,13 @@ const schema = z.object({
   brokerName: z.string().optional(),
   brokerPhone: z.string().optional(),
   agencyName: z.string().optional(),
-  triggerKeyword: z.string().min(1, "Zadejte klíčové slovo"),
+  triggerKeyword: z
+    .string()
+    .min(1, "Zadejte klíčové slovo")
+    .refine(
+      (v) => v.split(",").map((k) => k.trim()).filter(Boolean).length <= 3,
+      "Zadejte maximálně 3 klíčová slova"
+    ),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
   notificationWindowEnabled: z.boolean().default(true),
   notificationTimeFrom: z.string().regex(TIME_REGEX, "Formát HH:MM").default("08:00"),
@@ -349,14 +355,17 @@ function SettingsPageInner() {
             </div>
             <div>
               <Label htmlFor="triggerKeyword">
-                Klíčové slovo (např. prohlídka)
+                Klíčová slova (až 3, oddělená čárkou)
               </Label>
               <Input
                 id="triggerKeyword"
                 {...form.register("triggerKeyword")}
-                placeholder="prohlídka"
+                placeholder="prohlídka, prohlidka"
                 className="mt-1"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Událost v kalendáři se zpracuje, když obsahuje kterékoli z těchto slov.
+              </p>
               {form.formState.errors.triggerKeyword && (
                 <p className="text-sm text-destructive mt-1">
                   {form.formState.errors.triggerKeyword.message}

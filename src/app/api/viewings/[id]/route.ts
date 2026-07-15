@@ -85,7 +85,8 @@ export async function PATCH(
         .maybeSingle();
 
       if (settings?.google_refresh_token) {
-        const keyword = (settings.trigger_keyword ?? "prohlídka").trim() || "prohlídka";
+        // Při zápisu do kalendáře se použije první z (až 3) klíčových slov
+        const keyword = (settings.trigger_keyword ?? "prohlídka").split(",")[0].trim() || "prohlídka";
         try {
           const oauth2Client = new google.auth.OAuth2(clientId, clientSecret, "");
           oauth2Client.setCredentials({ refresh_token: settings.google_refresh_token });
