@@ -61,7 +61,7 @@ export async function initiateVapiCall(opts: {
     `1. Úvodní větu jsi již řekl(a). Nyní ČEKEJ na odpověď klienta.\n` +
     `2. Když klient odpoví, reaguj přirozeně a konverzuj. Detaily (adresu, přesný čas) sám od sebe NEŘÍKEJ — řekni je jen když se klient zeptá. Adresa: ${address || "neuvedena"}. Čas: ${startDate} v ${startTime}.\n` +
     `3. Pokud POTVRDÍ účast: řekni "Výborně, děkuji za potvrzení! Těšíme se na viděnou na prohlídce. Na shledanou!" a TEPRVE POTOM ukonči hovor.\n` +
-    `4. Pokud ODMÍTNE nebo chce zrušit: řekni "Dobře, rozumím. Prohlídku tedy rušíme.${opts.brokerName || opts.brokerPhone ? ` Pokud byste si to rozmyslel(a), kontaktujte nás na ${opts.brokerName ?? ""}${opts.brokerPhone ? ` (${opts.brokerPhone})` : ""}.` : ""} Na shledanou!" a TEPRVE POTOM ukonči hovor.\n` +
+    `4. Pokud ODMÍTNE nebo chce zrušit: řekni "Dobře, rozumím. Prohlídku tedy rušíme. Na shledanou!" a TEPRVE POTOM ukonči hovor. Telefonní číslo makléře NIKDY nediktuj sám od sebe — jen když si ho klient výslovně vyžádá${opts.brokerName || opts.brokerPhone ? ` (makléř: ${opts.brokerName ?? ""}${opts.brokerPhone ? `, tel. ${opts.brokerPhone}` : ""})` : ""}.\n` +
     `5. Pokud je nejasná odpověď: zeptej se znovu stručně.\n\n` +
     `KRITICKY DŮLEŽITÉ:\n` +
     `- Po každé větě POČKEJ na reakci klienta\n` +
