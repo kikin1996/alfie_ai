@@ -192,10 +192,12 @@ export default function HistoryPage() {
             Zpět
           </Button>
         </Link>
-        <div className="flex items-center gap-2">
-          <History className="h-7 w-7 text-navy" />
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
+            <History className="h-5 w-5" />
+          </div>
           <div>
-            <h1 className="text-2xl font-display font-semibold text-navy">Minulé</h1>
+            <h1 className="text-2xl font-display font-semibold tracking-tight text-navy">Minulé</h1>
             <p className="text-muted-foreground text-sm">Přehled proběhlých prohlídek z minulých dní.</p>
           </div>
         </div>
@@ -213,7 +215,7 @@ export default function HistoryPage() {
             const start = new Date(v.eventStart);
             const smsSent = v.sms2hSent || v.sms1hSent || v.status === "cancelled" || v.status === "confirmed";
             return (
-              <Card key={v.id} className="border-navy/10 opacity-80">
+              <Card key={v.id} className="border-border/60 opacity-90 transition-shadow hover:shadow-lifted hover:opacity-100">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-4">
                     <CardTitle className="text-base">Klient: {v.clientName || "—"}</CardTitle>

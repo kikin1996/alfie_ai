@@ -266,15 +266,22 @@ function SettingsPageInner() {
           </div>
         </div>
       )}
-      <h1 className="text-2xl font-display font-semibold text-navy mb-2">
-        Nastavení
-      </h1>
-      <p className="text-muted-foreground mb-6">
-        Kalendář, šablona SMS a notifikace (WhatsApp nebo email).
-      </p>
+      <div className="mb-6 flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
+          <Calendar className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-display font-semibold tracking-tight text-navy">
+            Nastavení
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Kalendář, šablona SMS a notifikace (WhatsApp nebo email).
+          </p>
+        </div>
+      </div>
 
       {calendarMessage && (
-        <div className={`mb-6 flex items-center gap-2 rounded-lg border p-3 ${calendarMessage.className}`}>
+        <div className={`mb-6 flex items-center gap-2 rounded-xl border p-3 shadow-xs ${calendarMessage.className}`}>
           <calendarMessage.icon className="h-5 w-5 shrink-0" />
           <p className="text-sm">{calendarMessage.text}</p>
         </div>

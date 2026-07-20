@@ -85,8 +85,21 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 6px)",
+        xl: "calc(var(--radius) + 4px)",
+        "2xl": "calc(var(--radius) + 10px)",
+      },
+      boxShadow: {
+        xs: "0 1px 2px 0 rgb(16 24 40 / 0.04)",
+        soft: "0 1px 2px 0 rgb(16 24 40 / 0.04), 0 1px 3px 0 rgb(16 24 40 / 0.06)",
+        card: "0 2px 4px -2px rgb(16 24 40 / 0.06), 0 4px 10px -2px rgb(16 24 40 / 0.08)",
+        lifted: "0 8px 20px -6px rgb(16 24 40 / 0.12), 0 4px 8px -4px rgb(16 24 40 / 0.06)",
+        glow: "0 0 0 1px rgb(16 185 129 / 0.15), 0 12px 28px -10px rgb(16 185 129 / 0.35)",
+      },
+      backgroundImage: {
+        "gradient-navy": "linear-gradient(135deg, hsl(var(--navy)) 0%, hsl(var(--navy-light)) 100%)",
+        "gradient-emerald": "linear-gradient(135deg, hsl(var(--emerald)) 0%, hsl(var(--emerald-light)) 100%)",
       },
       keyframes: {
         "accordion-down": {

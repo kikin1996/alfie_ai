@@ -149,9 +149,14 @@ function SubscriptionPageInner() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Předplatné</h1>
-        <p className="text-muted-foreground mt-1">Vyberte plán, který vyhovuje vašim potřebám.</p>
+      <div className="flex items-center gap-3">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
+          <CreditCard className="h-5 w-5" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-display font-bold tracking-tight text-foreground">Předplatné</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Vyberte plán, který vyhovuje vašim potřebám.</p>
+        </div>
       </div>
 
       {successParam && (
@@ -211,7 +216,7 @@ function SubscriptionPageInner() {
       )}
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive shadow-soft">
           {error}
         </div>
       )}
@@ -233,10 +238,10 @@ function SubscriptionPageInner() {
                 return (
                   <div
                     key={pack.id}
-                    className={`relative flex flex-col rounded-xl border p-4 ${pack.popular ? "border-primary ring-1 ring-primary" : "border-border"}`}
+                    className={`relative flex flex-col rounded-2xl border p-4 transition-all hover:-translate-y-0.5 ${pack.popular ? "border-navy ring-2 ring-navy/15 shadow-lifted" : "border-border/60 shadow-xs"}`}
                   >
                     {pack.popular && (
-                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground">
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-navy px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground shadow-soft">
                         Nejoblíbenější
                       </span>
                     )}
@@ -285,12 +290,12 @@ function SubscriptionPageInner() {
           return (
             <Card
               key={plan.id}
-              className={`relative flex flex-col ${isCurrent ? "border-primary ring-1 ring-primary" : ""}`}
+              className={`relative flex flex-col transition-all hover:-translate-y-1 hover:shadow-lifted ${isCurrent ? "border-navy ring-2 ring-navy/20 shadow-lifted" : ""}`}
             >
               {/* Aktivní badge */}
               {isCurrent && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="rounded-full bg-primary px-3 py-0.5 text-xs font-medium text-primary-foreground">
+                  <span className="rounded-full bg-gradient-navy px-3 py-0.5 text-xs font-medium text-primary-foreground shadow-soft">
                     Aktivní
                   </span>
                 </div>

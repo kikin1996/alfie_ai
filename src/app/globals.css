@@ -10,54 +10,103 @@ body {
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 220 30% 97%;
     --foreground: 222 47% 11%;
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 222 47% 18%;
+    --primary: 222 50% 15%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 210 40% 96%;
+    --secondary: 210 35% 95%;
     --secondary-foreground: 222 47% 11%;
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
-    --accent: 210 40% 96%;
+    --muted: 210 30% 95.5%;
+    --muted-foreground: 215 16% 44%;
+    --accent: 210 30% 94%;
     --accent-foreground: 222 47% 11%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 222 47% 18%;
-    --radius: 0.5rem;
-    --navy: 222 47% 18%;
-    --navy-light: 222 30% 28%;
-    --emerald: 160 84% 39%;
-    --emerald-light: 160 60% 45%;
-    --emerald-bg: 160 40% 96%;
+    --border: 220 20% 90%;
+    --input: 220 20% 88%;
+    --ring: 222 50% 15%;
+    --radius: 0.875rem;
+
+    --navy: 222 50% 15%;
+    --navy-light: 222 35% 30%;
+    --emerald: 158 64% 38%;
+    --emerald-light: 158 55% 46%;
+    --emerald-bg: 152 45% 95%;
     --pending: 38 92% 50%;
-    --pending-bg: 38 80% 95%;
+    --pending-bg: 38 100% 96%;
     --warning: 38 92% 50%;
-    --warning-bg: 38 80% 95%;
-    --cancelled: 0 72% 51%;
-    --cancelled-bg: 0 60% 96%;
-    --sidebar-background: 222 47% 18%;
+    --warning-bg: 38 100% 96%;
+    --cancelled: 0 70% 50%;
+    --cancelled-bg: 0 65% 96%;
+
+    --sidebar-background: 222 50% 15%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary: 158 64% 38%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 222 40% 25%;
+    --sidebar-accent: 222 40% 24%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 222 30% 25%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-ring: 158 64% 38%;
   }
+
   .dark {
-    --background: 222 47% 11%;
-    --foreground: 210 40% 98%;
-    --card: 222 47% 14%;
-    --card-foreground: 210 40% 98%;
+    --background: 222 40% 8%;
+    --foreground: 210 30% 96%;
+    --card: 222 38% 11%;
+    --card-foreground: 210 30% 96%;
+    --popover: 222 38% 11%;
+    --popover-foreground: 210 30% 96%;
     --primary: 0 0% 100%;
-    --primary-foreground: 222 47% 18%;
-    --navy: 222 30% 28%;
-    --navy-light: 222 25% 35%;
+    --primary-foreground: 222 47% 15%;
+    --secondary: 222 30% 16%;
+    --secondary-foreground: 210 30% 96%;
+    --muted: 222 30% 16%;
+    --muted-foreground: 215 16% 65%;
+    --accent: 222 30% 18%;
+    --accent-foreground: 210 30% 96%;
+    --destructive: 0 65% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 25% 20%;
+    --input: 222 25% 20%;
+    --ring: 158 64% 45%;
+
+    --navy: 222 35% 32%;
+    --navy-light: 222 28% 40%;
+    --emerald: 158 55% 48%;
+    --emerald-light: 158 50% 55%;
+    --emerald-bg: 158 40% 16%;
+    --pending: 38 85% 58%;
+    --pending-bg: 38 60% 16%;
+    --warning: 38 85% 58%;
+    --warning-bg: 38 60% 16%;
+    --cancelled: 0 65% 62%;
+    --cancelled-bg: 0 45% 18%;
+
+    --sidebar-background: 222 40% 8%;
+    --sidebar-accent: 222 30% 16%;
+    --sidebar-border: 222 25% 20%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(60rem 30rem at 15% -10%, hsl(var(--navy) / 0.06), transparent),
+      radial-gradient(50rem 25rem at 110% 10%, hsl(var(--emerald) / 0.07), transparent);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  ::selection {
+    background-color: hsl(var(--emerald) / 0.25);
   }
 }

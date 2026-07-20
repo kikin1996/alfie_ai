@@ -51,7 +51,7 @@ function LiveClock() {
   }, []);
 
   return (
-    <div className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-sm font-mono tabular-nums text-muted-foreground">
+    <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 py-1.5 text-sm font-mono tabular-nums text-muted-foreground shadow-xs">
       <Clock className="h-3.5 w-3.5" />
       {time}
     </div>
@@ -431,7 +431,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
   if (removed) return null;
 
   return (
-    <Card className="border-navy/10">
+    <Card className="border-border/60 transition-shadow hover:shadow-lifted">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -871,10 +871,12 @@ export default function DashboardPage() {
   return (
     <div className="p-6">
       <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-8 w-8 text-navy" />
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
+            <Calendar className="h-5 w-5" />
+          </div>
           <div>
-            <h1 className="text-2xl font-display font-semibold text-navy">Prohlídky</h1>
+            <h1 className="text-2xl font-display font-semibold tracking-tight text-navy">Prohlídky</h1>
             <p className="text-muted-foreground text-sm">
               Přehled prohlídek z Google Kalendáře.
             </p>
@@ -932,7 +934,7 @@ export default function DashboardPage() {
 
       {/* Upozornění na nedostatek kreditů */}
       {hasSubscription === false && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-destructive bg-destructive/10 px-5 py-4">
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/10 px-5 py-4 shadow-soft">
           <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
           <div>
             <p className="font-semibold text-destructive">Nemáte aktivní předplatné</p>
@@ -943,7 +945,7 @@ export default function DashboardPage() {
         </div>
       )}
       {hasSubscription === true && credits !== null && credits === 0 && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-destructive bg-destructive/10 px-5 py-4">
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/10 px-5 py-4 shadow-soft">
           <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
           <div>
             <p className="font-semibold text-destructive">Nemáte žádné kredity</p>
@@ -954,7 +956,7 @@ export default function DashboardPage() {
         </div>
       )}
       {hasSubscription === true && credits !== null && credits > 0 && credits < 5 && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-destructive bg-destructive/10 px-5 py-4">
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/10 px-5 py-4 shadow-soft">
           <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
           <div>
             <p className="font-semibold text-destructive">
@@ -968,7 +970,7 @@ export default function DashboardPage() {
         </div>
       )}
       {hasSubscription === true && credits !== null && credits >= 5 && credits < 15 && (
-        <div className="mb-4 flex items-start gap-3 rounded-xl border-2 border-amber-500 bg-amber-500/10 px-5 py-4">
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-5 py-4 shadow-soft">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
           <div>
             <p className="font-semibold text-amber-700 dark:text-amber-400">
@@ -983,12 +985,12 @@ export default function DashboardPage() {
       )}
 
       {/* Pokyny pro formát události v Google Kalendáři */}
-      <div className="mb-4 rounded-xl border border-border bg-muted/40 px-5 py-4">
+      <div className="mb-4 rounded-2xl border border-border/60 bg-muted/30 px-5 py-4 shadow-xs">
         <p className="text-sm font-semibold text-foreground mb-1.5">Jak přidat prohlídku do Google Kalendáře</p>
         <p className="text-sm text-muted-foreground mb-2">
           Název události pište v tomto pořadí, oddělené čárkami:
         </p>
-        <code className="block rounded-md bg-card border border-border px-3 py-2 text-sm font-mono text-foreground mb-2">
+        <code className="block rounded-xl bg-card border border-border/60 px-3 py-2 text-sm font-mono text-foreground mb-2 shadow-xs">
           Jméno klienta, Ulice, Město, +420XXXXXXXXX, prohlídka
         </code>
         <p className="text-xs text-muted-foreground">
@@ -1010,7 +1012,7 @@ export default function DashboardPage() {
         <div className="space-y-6">
           {upcoming.length > 0 && (
             <section>
-              <h2 className="text-lg font-medium text-navy mb-3">Nadcházející</h2>
+              <h2 className="text-lg font-display font-semibold tracking-tight text-navy mb-3">Nadcházející</h2>
               <div className="grid gap-3">
                 {upcoming.map((v) => (
                   <ViewingCard key={v.id} viewing={v} isAdmin={isAdmin} smsSettings={smsSettings} />
