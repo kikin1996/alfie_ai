@@ -27,7 +27,7 @@ export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-navy p-4">
       {/* dekorativní pozadí */}
-      <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-emerald/20 blur-3xl" />
+      <div className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent-blue/20 blur-3xl" />
       <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.06]"

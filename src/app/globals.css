@@ -16,7 +16,7 @@ body {
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 222 50% 15%;
+    --primary: 263 70% 50%;
     --primary-foreground: 0 0% 100%;
     --secondary: 210 35% 95%;
     --secondary-foreground: 222 47% 11%;
@@ -28,11 +28,12 @@ body {
     --destructive-foreground: 0 0% 100%;
     --border: 220 20% 90%;
     --input: 220 20% 88%;
-    --ring: 222 50% 15%;
+    --ring: 263 70% 50%;
     --radius: 0.875rem;
 
-    --navy: 222 50% 15%;
-    --navy-light: 222 35% 30%;
+    --navy: 263 70% 50%;
+    --navy-light: 239 84% 67%;
+    --accent-blue: 217 91% 60%;
     --emerald: 158 64% 38%;
     --emerald-light: 158 55% 46%;
     --emerald-bg: 152 45% 95%;
@@ -72,10 +73,11 @@ body {
     --destructive-foreground: 0 0% 100%;
     --border: 222 25% 20%;
     --input: 222 25% 20%;
-    --ring: 158 64% 45%;
+    --ring: 255 92% 76%;
 
-    --navy: 222 35% 32%;
-    --navy-light: 222 28% 40%;
+    --navy: 234 89% 74%;
+    --navy-light: 255 92% 76%;
+    --accent-blue: 213 94% 68%;
     --emerald: 158 55% 48%;
     --emerald-light: 158 50% 55%;
     --emerald-bg: 158 40% 16%;
@@ -101,7 +103,7 @@ body {
     background-color: hsl(var(--background));
     background-image:
       radial-gradient(60rem 30rem at 15% -10%, hsl(var(--navy) / 0.06), transparent),
-      radial-gradient(50rem 25rem at 110% 10%, hsl(var(--emerald) / 0.07), transparent);
+      radial-gradient(50rem 25rem at 110% 10%, hsl(var(--accent-blue) / 0.08), transparent);
     background-attachment: fixed;
     background-repeat: no-repeat;
   }

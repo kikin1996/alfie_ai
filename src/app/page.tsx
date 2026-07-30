@@ -48,7 +48,7 @@ export default async function HomePage() {
       {/* ── Hero ─────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-navy py-28 text-white">
         {/* dekorativní kruhy + jemná mřížka */}
-        <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-emerald/20 blur-3xl" />
+        <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-accent-blue/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.07]"
@@ -61,12 +61,12 @@ export default async function HomePage() {
 
         <div className="container relative text-center">
           <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm shadow-soft backdrop-blur-sm">
-            <CalendarDays className="h-4 w-4 text-emerald-400" />
+            <CalendarDays className="h-4 w-4 text-accent-blue" />
             Automatizace prohlídek nemovitostí
           </div>
           <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
             Nikdy nezapomeňte{" "}
-            <span className="bg-gradient-to-r from-emerald-400 to-emerald-300 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-violet-300 to-accent-blue bg-clip-text text-transparent">
               připomenout prohlídku
             </span>
           </h1>
@@ -77,7 +77,7 @@ export default async function HomePage() {
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-emerald px-7 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-7 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
             >
               Začít zdarma
               <ArrowRight className="h-5 w-5" />
@@ -118,7 +118,7 @@ export default async function HomePage() {
                 icon: MessageSquare,
                 title: "SMS jdou samy",
                 desc: "2 hodiny a 1 hodinu před prohlídkou odešle systém SMS s potvrzením. Klient odpoví ANO nebo NE – vy vidíte status v dashboardu.",
-                color: "bg-emerald",
+                color: "bg-accent-blue",
               },
               {
                 step: "3",
@@ -198,8 +198,8 @@ export default async function HomePage() {
               },
             ].map((f) => (
               <div key={f.title} className="flex gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lifted">
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-bg">
-                  <f.icon className="h-5 w-5 text-emerald" />
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-blue/10">
+                  <f.icon className="h-5 w-5 text-accent-blue" />
                 </div>
                 <div>
                   <h3 className="font-medium text-navy">{f.title}</h3>
@@ -213,7 +213,7 @@ export default async function HomePage() {
 
       {/* ── CTA ──────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-navy py-20 text-white">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-emerald/15 blur-3xl" />
+        <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-accent-blue/15 blur-3xl" />
         <div className="container relative text-center">
           <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
             Připraveni automatizovat prohlídky?
@@ -224,7 +224,7 @@ export default async function HomePage() {
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-emerald px-8 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-8 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
             >
               Začít zdarma
               <ArrowRight className="h-5 w-5" />
