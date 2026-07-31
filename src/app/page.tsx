@@ -27,7 +27,15 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen text-foreground">
+    <div className="relative min-h-screen overflow-x-hidden text-foreground">
+      {/* pastelový mesh gradient přes celou stránku */}
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-sky-50 via-white to-violet-100" />
+      <div className="pointer-events-none fixed -left-32 -top-32 -z-10 h-[30rem] w-[30rem] rounded-full bg-violet-400/50 blur-[100px]" />
+      <div className="pointer-events-none fixed -right-24 -top-16 -z-10 h-[28rem] w-[28rem] rounded-full bg-sky-300/50 blur-[100px]" />
+      <div className="pointer-events-none fixed right-1/4 bottom-0 -z-10 h-80 w-80 rounded-full bg-pink-300/40 blur-[100px]" />
+      <div className="pointer-events-none fixed left-1/4 bottom-0 -z-10 h-80 w-80 rounded-full bg-purple-300/40 blur-[100px]" />
+      <div className="pointer-events-none fixed left-1/2 top-1/3 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-amber-100/30 blur-[100px]" />
+
       {/* ── Navbar ───────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/75 backdrop-blur-xl">
         <div className="container flex h-20 items-center justify-between">
@@ -46,14 +54,7 @@ export default async function HomePage() {
       </header>
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-sky-50 via-white to-violet-200 py-28 sm:py-36">
-        {/* pastelový mesh gradient */}
-        <div className="pointer-events-none absolute -left-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-violet-400/60 blur-[90px]" />
-        <div className="pointer-events-none absolute -right-24 -top-16 h-[28rem] w-[28rem] rounded-full bg-sky-300/60 blur-[90px]" />
-        <div className="pointer-events-none absolute right-1/4 bottom-0 h-80 w-80 rounded-full bg-pink-300/50 blur-[90px]" />
-        <div className="pointer-events-none absolute left-1/4 bottom-0 h-80 w-80 rounded-full bg-purple-300/50 blur-[90px]" />
-        <div className="pointer-events-none absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-amber-100/40 blur-[90px]" />
-
+      <section className="relative overflow-hidden py-28 sm:py-36">
         {/* lesklá iridescentní koule */}
         <div
           aria-hidden
@@ -165,7 +166,7 @@ export default async function HomePage() {
       </section>
 
       {/* ── Funkce ───────────────────────────────────────────────── */}
-      <section className="bg-muted/30 py-20">
+      <section className="py-20">
         <div className="container">
           <div className="mb-12 text-center">
             <h2 className="font-display text-3xl font-bold text-navy">
@@ -229,29 +230,33 @@ export default async function HomePage() {
       </section>
 
       {/* ── CTA ──────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-navy py-20 text-white">
-        <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-accent-blue/15 blur-3xl" />
-        <div className="container relative text-center">
-          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-            Připraveni automatizovat prohlídky?
-          </h2>
-          <p className="mx-auto mt-4 max-w-xl text-white/70">
-            Zaregistrujte se a propojte svůj Google Kalendář. Nastavení trvá méně než 5 minut.
-          </p>
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link
-              href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-8 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
-            >
-              Začít zdarma
-              <ArrowRight className="h-5 w-5" />
-            </Link>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-8 py-3.5 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
-            >
-              Mám účet – přihlásit se
-            </Link>
+      <section className="py-20">
+        <div className="container">
+          <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-white/60 px-6 py-16 text-center shadow-lifted backdrop-blur-xl sm:py-20">
+            <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-accent-blue/20 blur-3xl" />
+            <div className="relative">
+              <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                Připraveni automatizovat prohlídky?
+              </h2>
+              <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
+                Zaregistrujte se a propojte svůj Google Kalendář. Nastavení trvá méně než 5 minut.
+              </p>
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                <Link
+                  href="/register"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-8 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
+                >
+                  Začít zdarma
+                  <ArrowRight className="h-5 w-5" />
+                </Link>
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-8 py-3.5 text-base font-semibold text-slate-700 shadow-soft transition-all hover:bg-slate-50"
+                >
+                  Mám účet – přihlásit se
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </section>
