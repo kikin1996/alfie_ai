@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
+import Image from "next/image";
 import { NavbarAuth } from "@/components/NavbarAuth";
 import {
   CalendarDays,
@@ -40,9 +41,7 @@ export default async function HomePage() {
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/75 backdrop-blur-xl">
         <div className="container flex h-20 items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand shadow-soft">
-              <CalendarDays className="h-5 w-5 text-white" />
-            </div>
+            <Image src="/logo.png" alt="Renote" width={36} height={36} className="h-9 w-9" priority />
             <span className="font-display text-lg font-bold tracking-tight text-navy">
               Renote
             </span>
@@ -243,7 +242,7 @@ export default async function HomePage() {
       <footer className="border-t border-border/70 py-6">
         <div className="container flex flex-col items-center justify-between gap-2 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4 text-navy" />
+            <Image src="/logo.png" alt="Renote" width={18} height={18} className="h-[18px] w-[18px]" />
             <span className="font-display font-semibold text-navy">Renote</span>
           </div>
           <p>© {new Date().getFullYear()} Renote. Všechna práva vyhrazena.</p>
