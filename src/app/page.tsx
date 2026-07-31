@@ -54,29 +54,7 @@ export default async function HomePage() {
       </header>
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden py-28 sm:py-36">
-        {/* lesklá iridescentní koule */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full sm:h-80 sm:w-80"
-          style={{
-            backgroundImage:
-              "conic-gradient(from 210deg at 40% 35%, #ddd6fe, #bfdbfe, #fbcfe8, #fef9c3, #ddd6fe)",
-            boxShadow:
-              "inset -24px -24px 50px rgba(30,20,60,0.25), inset 18px 18px 40px rgba(255,255,255,0.65), 0 30px 60px -15px rgba(109,40,217,0.35)",
-          }}
-        >
-          <div
-            className="absolute inset-0 rounded-full opacity-60"
-            style={{
-              backgroundImage:
-                "repeating-linear-gradient(115deg, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 3px, transparent 4px, transparent 14px)",
-              mixBlendMode: "overlay",
-            }}
-          />
-          <div className="absolute left-[18%] top-[14%] h-10 w-16 rounded-full bg-white/70 blur-md" />
-        </div>
-
+      <section className="relative py-28 sm:py-36">
         <div className="container relative text-center">
           <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/70 px-4 py-1.5 text-sm text-muted-foreground shadow-soft backdrop-blur-sm">
             <CalendarDays className="h-4 w-4 text-navy" />
