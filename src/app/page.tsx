@@ -12,7 +12,6 @@ import {
   LayoutDashboard,
   RefreshCw,
   Bell,
-  Sparkles,
 } from "lucide-react";
 
 export default async function HomePage() {
@@ -47,12 +46,13 @@ export default async function HomePage() {
       </header>
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-white py-28 sm:py-36">
+      <section className="relative overflow-hidden bg-gradient-to-br from-sky-50 via-white to-violet-200 py-28 sm:py-36">
         {/* pastelový mesh gradient */}
-        <div className="pointer-events-none absolute -left-32 -top-32 h-[28rem] w-[28rem] rounded-full bg-violet-300/40 blur-[100px]" />
-        <div className="pointer-events-none absolute -right-20 top-0 h-[26rem] w-[26rem] rounded-full bg-sky-300/40 blur-[100px]" />
-        <div className="pointer-events-none absolute right-1/4 bottom-0 h-72 w-72 rounded-full bg-pink-200/50 blur-[100px]" />
-        <div className="pointer-events-none absolute left-1/3 bottom-0 h-80 w-80 rounded-full bg-amber-100/40 blur-[100px]" />
+        <div className="pointer-events-none absolute -left-32 -top-32 h-[30rem] w-[30rem] rounded-full bg-violet-400/60 blur-[90px]" />
+        <div className="pointer-events-none absolute -right-24 -top-16 h-[28rem] w-[28rem] rounded-full bg-sky-300/60 blur-[90px]" />
+        <div className="pointer-events-none absolute right-1/4 bottom-0 h-80 w-80 rounded-full bg-pink-300/50 blur-[90px]" />
+        <div className="pointer-events-none absolute left-1/4 bottom-0 h-80 w-80 rounded-full bg-purple-300/50 blur-[90px]" />
+        <div className="pointer-events-none absolute left-1/2 top-1/3 h-72 w-72 -translate-x-1/2 rounded-full bg-amber-100/40 blur-[90px]" />
 
         {/* lesklá iridescentní koule */}
         <div
@@ -83,34 +83,8 @@ export default async function HomePage() {
           </div>
           <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
             Nikdy nezapomeňte připomenout{" "}
-            <span className="relative inline-block">
-              <span className="relative z-10 bg-gradient-to-r from-navy to-accent-blue bg-clip-text text-transparent">
-                prohlídku
-              </span>
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -inset-x-3 -inset-y-2 rounded-lg border border-dashed border-navy/40"
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -left-3 -top-2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-[2px] border border-navy/50 bg-white"
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -right-3 -top-2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-[2px] border border-navy/50 bg-white"
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -left-3 -bottom-2 h-2 w-2 -translate-x-1/2 translate-y-1/2 rounded-[2px] border border-navy/50 bg-white"
-              />
-              <span
-                aria-hidden
-                className="pointer-events-none absolute -right-3 -bottom-2 h-2 w-2 translate-x-1/2 translate-y-1/2 rounded-[2px] border border-navy/50 bg-white"
-              />
-              <Sparkles
-                aria-hidden
-                className="pointer-events-none absolute -right-5 -top-6 h-4 w-4 text-accent-blue"
-              />
+            <span className="bg-gradient-to-r from-navy to-accent-blue bg-clip-text text-transparent">
+              prohlídku
             </span>
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
