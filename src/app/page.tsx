@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   RefreshCw,
   Bell,
+  Sparkles,
 } from "lucide-react";
 
 export default async function HomePage() {
@@ -29,62 +30,104 @@ export default async function HomePage() {
   return (
     <div className="min-h-screen text-foreground">
       {/* ── Navbar ───────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-border/70 bg-card/70 backdrop-blur-xl">
-        <div className="container flex h-16 items-center justify-between">
+      <header className="sticky top-0 z-50 border-b border-black/5 bg-white/75 backdrop-blur-xl">
+        <div className="container flex h-20 items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-navy shadow-soft">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-brand shadow-soft">
               <CalendarDays className="h-5 w-5 text-white" />
             </div>
             <span className="font-display text-lg font-bold tracking-tight text-navy">
               Renote
             </span>
           </div>
-          <nav className="flex items-center gap-2">
+          <nav className="flex items-center gap-3">
             <NavbarAuth />
           </nav>
         </div>
       </header>
 
       {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-navy py-28 text-white">
-        {/* dekorativní kruhy + jemná mřížka */}
-        <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-accent-blue/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 -left-24 h-80 w-80 rounded-full bg-white/10 blur-3xl" />
+      <section className="relative overflow-hidden bg-white py-28 sm:py-36">
+        {/* pastelový mesh gradient */}
+        <div className="pointer-events-none absolute -left-32 -top-32 h-[28rem] w-[28rem] rounded-full bg-violet-300/40 blur-[100px]" />
+        <div className="pointer-events-none absolute -right-20 top-0 h-[26rem] w-[26rem] rounded-full bg-sky-300/40 blur-[100px]" />
+        <div className="pointer-events-none absolute right-1/4 bottom-0 h-72 w-72 rounded-full bg-pink-200/50 blur-[100px]" />
+        <div className="pointer-events-none absolute left-1/3 bottom-0 h-80 w-80 rounded-full bg-amber-100/40 blur-[100px]" />
+
+        {/* lesklá iridescentní koule */}
         <div
-          className="pointer-events-none absolute inset-0 opacity-[0.07]"
+          aria-hidden
+          className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full sm:h-80 sm:w-80"
           style={{
             backgroundImage:
-              "linear-gradient(to right, white 1px, transparent 1px), linear-gradient(to bottom, white 1px, transparent 1px)",
-            backgroundSize: "3rem 3rem",
+              "conic-gradient(from 210deg at 40% 35%, #ddd6fe, #bfdbfe, #fbcfe8, #fef9c3, #ddd6fe)",
+            boxShadow:
+              "inset -24px -24px 50px rgba(30,20,60,0.25), inset 18px 18px 40px rgba(255,255,255,0.65), 0 30px 60px -15px rgba(109,40,217,0.35)",
           }}
-        />
+        >
+          <div
+            className="absolute inset-0 rounded-full opacity-60"
+            style={{
+              backgroundImage:
+                "repeating-linear-gradient(115deg, rgba(255,255,255,0.55) 0px, rgba(255,255,255,0.55) 3px, transparent 4px, transparent 14px)",
+              mixBlendMode: "overlay",
+            }}
+          />
+          <div className="absolute left-[18%] top-[14%] h-10 w-16 rounded-full bg-white/70 blur-md" />
+        </div>
 
         <div className="container relative text-center">
-          <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-sm shadow-soft backdrop-blur-sm">
-            <CalendarDays className="h-4 w-4 text-accent-blue" />
+          <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/70 px-4 py-1.5 text-sm text-muted-foreground shadow-soft backdrop-blur-sm">
+            <CalendarDays className="h-4 w-4 text-navy" />
             Automatizace prohlídek nemovitostí
           </div>
-          <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-            Nikdy nezapomeňte{" "}
-            <span className="bg-gradient-to-r from-violet-300 to-accent-blue bg-clip-text text-transparent">
-              připomenout prohlídku
+          <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+            Nikdy nezapomeňte připomenout{" "}
+            <span className="relative inline-block">
+              <span className="relative z-10 bg-gradient-to-r from-navy to-accent-blue bg-clip-text text-transparent">
+                prohlídku
+              </span>
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -inset-x-3 -inset-y-2 rounded-lg border border-dashed border-navy/40"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -left-3 -top-2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-[2px] border border-navy/50 bg-white"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -right-3 -top-2 h-2 w-2 translate-x-1/2 -translate-y-1/2 rounded-[2px] border border-navy/50 bg-white"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -left-3 -bottom-2 h-2 w-2 -translate-x-1/2 translate-y-1/2 rounded-[2px] border border-navy/50 bg-white"
+              />
+              <span
+                aria-hidden
+                className="pointer-events-none absolute -right-3 -bottom-2 h-2 w-2 translate-x-1/2 translate-y-1/2 rounded-[2px] border border-navy/50 bg-white"
+              />
+              <Sparkles
+                aria-hidden
+                className="pointer-events-none absolute -right-5 -top-6 h-4 w-4 text-accent-blue"
+              />
             </span>
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-white/70">
+          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
             Renote propojí váš Google Kalendář s SMS notifikacemi a AI hovory.
             Klienti dostanou automatické připomínky – vy se soustředíte na prodej.
           </p>
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-xl bg-gradient-brand px-7 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-7 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
             >
               Začít zdarma
               <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-7 py-3.5 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-white/20"
+              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-7 py-3.5 text-base font-semibold text-slate-700 shadow-soft transition-all hover:bg-slate-50"
             >
               Přihlásit se
             </Link>
