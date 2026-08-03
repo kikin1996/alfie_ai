@@ -37,9 +37,9 @@ export default function Navbar() {
           <Image
             src="/logo.png"
             alt="Renote"
-            width={36}
-            height={36}
-            className="h-9 w-9 transition-transform group-hover:scale-105"
+            width={54}
+            height={54}
+            className="h-[54px] w-[54px] transition-transform group-hover:scale-105"
             priority
           />
           <span className="font-display text-lg font-bold tracking-tight text-foreground">
