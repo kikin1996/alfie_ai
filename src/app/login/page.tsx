@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { useAuth } from "@/hooks/useAuth";
 import { isSupabaseConfigured } from "@/lib/supabase";
-import { Calendar, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 // AlertCircle used only in dev
 
 export default function LoginPage() {
@@ -50,8 +51,8 @@ export default function LoginPage() {
           </div>
         )}
         <CardHeader className="text-center pt-8">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
-            <Calendar className="h-7 w-7" />
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center">
+            <Image src="/logo.png" alt="Renote" width={56} height={56} className="h-14 w-14" priority />
           </div>
           <CardTitle className="text-2xl font-display tracking-tight text-navy">
             Renote
