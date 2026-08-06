@@ -40,12 +40,12 @@ export default async function HomePage() {
       {/* ── Navbar ───────────────────────────────────────────────── */}
       <header className="sticky top-0 z-50 border-b border-black/5 bg-white/75 backdrop-blur-xl">
         <div className="container flex h-20 items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <Link href="/" className="flex items-center gap-2.5">
             <Image src="/logo.png" alt="Renote" width={54} height={54} className="h-[54px] w-[54px]" priority />
             <span className="font-display text-lg font-bold tracking-tight text-navy">
               Renote
             </span>
-          </div>
+          </Link>
           <nav className="flex items-center gap-3">
             <NavbarAuth />
           </nav>
