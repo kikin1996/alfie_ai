@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { createClient } from "@/lib/supabase";
+import Link from "next/link";
 import {
   Loader2,
   ShieldCheck,
@@ -27,6 +28,8 @@ import {
   ThumbsDown,
   HelpCircle,
   Send,
+  Inbox,
+  ArrowRight,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -467,6 +470,22 @@ export default function AdminPage() {
       )}
 
       <div className="space-y-6">
+        {/* S Reality CRM */}
+        <Link href="/admin/sreality">
+          <Card className="hover:border-ring/40 transition-colors cursor-pointer">
+            <CardContent className="p-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Inbox className="h-5 w-5 text-navy" />
+                <div>
+                  <p className="font-medium text-foreground">S Reality CRM</p>
+                  <p className="text-sm text-muted-foreground">Poptávky, prohlídky, reakce klientů a trvalé kontakty</p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0" />
+            </CardContent>
+          </Card>
+        </Link>
+
         {/* SMSbrána.cz */}
         <Card>
           <CardHeader>

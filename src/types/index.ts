@@ -85,3 +85,49 @@ export interface ParsedCalendarEvent {
   clientPhone: string
   clientName: string
 }
+
+// ---------------------------------------------------------------------------
+// S Reality CRM (admin-only)
+// ---------------------------------------------------------------------------
+
+export type SrealityLeadStatus = "new" | "scheduled" | "done" | "archived"
+export type SrealityLeadReaction = "interested" | "not_interested" | "no_show" | "thinking"
+export type SrealityListingType = "sale" | "rent"
+
+export interface SrealityLead {
+  id: string
+  srealityInquiryId: string
+  listingId?: string
+  listingTitle?: string
+  listingUrl?: string
+  listingType?: SrealityListingType
+  clientName?: string
+  clientPhone?: string
+  clientEmail?: string
+  message?: string
+  status: SrealityLeadStatus
+  viewingAt?: string
+  reaction?: SrealityLeadReaction
+  notes?: string
+  convertedContactId?: string
+  createdAt: string
+  updatedAt: string
+  syncedAt: string
+}
+
+export interface CrmContact {
+  id: string
+  name: string
+  phone?: string
+  email?: string
+  notes?: string
+  sourceLeadId?: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface SrealityConfig {
+  apiKey?: string | null
+  apiBaseUrl?: string | null
+  enabled: boolean
+}
