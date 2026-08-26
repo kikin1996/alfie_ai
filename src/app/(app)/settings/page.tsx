@@ -56,6 +56,8 @@ const schema = z.object({
       "Zadejte maximálně 3 klíčová slova"
     ),
   smsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
+  initialSmsEnabled: z.boolean().default(true),
+  initialSmsTemplate: z.string().min(1, "Zadejte šablonu SMS"),
   notificationWindowEnabled: z.boolean().default(true),
   notificationTimeFrom: z.string().regex(TIME_REGEX, "Formát HH:MM").default("08:00"),
   notificationTimeTo: z.string().regex(TIME_REGEX, "Formát HH:MM").default("18:00"),
@@ -72,6 +74,9 @@ type FormValues = z.infer<typeof schema>;
 
 const defaultTemplate =
   "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.";
+
+const defaultInitialSmsTemplate =
+  "Dobrý den, {clientName}, potvrzujeme prohlídku nemovitosti na adrese {address} dne {date} v {time}. S pozdravem {brokerName}";
 
 function SettingsPageInner() {
   const { user, loading: authLoading } = useAuth();
@@ -103,6 +108,8 @@ function SettingsPageInner() {
       agencyName: "",
       triggerKeyword: "prohlídka",
       smsTemplate: defaultTemplate,
+      initialSmsEnabled: true,
+      initialSmsTemplate: defaultInitialSmsTemplate,
       notificationWindowEnabled: true,
       notificationTimeFrom: "08:00",
       notificationTimeTo: "18:00",
@@ -127,7 +134,7 @@ function SettingsPageInner() {
         const [settingsRes, calendarRes] = await Promise.all([
           supabase
             .from("user_settings")
-            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, notification_window_enabled, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
+            .select("broker_name, broker_phone, agency_name, trigger_keyword, sms_template, initial_sms_enabled, initial_sms_template, notification_window_enabled, notification_time_from, notification_time_to, default_sms2h_enabled, default_sms1h_enabled, default_vapi_enabled, default_extra_notifications, notification_channel, whatsapp_phone, whatsapp_apikey, notification_email")
             .eq("user_id", user.id)
             .maybeSingle(),
           fetch("/api/settings/calendar-connected").then((r) => r.ok ? r.json() : { connected: false }).catch(() => ({ connected: false })),
@@ -141,6 +148,8 @@ function SettingsPageInner() {
             agencyName: data.agency_name ?? "",
             triggerKeyword: data.trigger_keyword ?? "prohlídka",
             smsTemplate: data.sms_template ?? defaultTemplate,
+            initialSmsEnabled: data.initial_sms_enabled ?? true,
+            initialSmsTemplate: data.initial_sms_template ?? defaultInitialSmsTemplate,
             notificationWindowEnabled: data.notification_window_enabled ?? true,
             notificationTimeFrom: data.notification_time_from ?? "08:00",
             notificationTimeTo: data.notification_time_to ?? "18:00",
@@ -179,6 +188,8 @@ function SettingsPageInner() {
           agency_name: values.agencyName || null,
           trigger_keyword: values.triggerKeyword,
           sms_template: values.smsTemplate,
+          initial_sms_enabled: values.initialSmsEnabled,
+          initial_sms_template: values.initialSmsTemplate,
           notification_window_enabled: values.notificationWindowEnabled,
           notification_time_from: values.notificationTimeFrom,
           notification_time_to: values.notificationTimeTo,
@@ -402,6 +413,48 @@ function SettingsPageInner() {
               {form.formState.errors.smsTemplate && (
                 <p className="text-sm text-destructive mt-1">
                   {form.formState.errors.smsTemplate.message}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Úvodní SMS po založení prohlídky */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Úvodní SMS po založení prohlídky</CardTitle>
+            <CardDescription>
+              Jakmile systém najde novou prohlídku (kontrola co 5 minut, až 3 týdny dopředu), pošle klientovi ihned SMS s adresou, datem a časem. Placeholdery: {"{address}"}, {"{date}"}, {"{time}"}, {"{clientName}"}, {"{agencyName}"}, {"{brokerName}"}, {"{brokerPhone}"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <label className="flex items-center justify-between gap-4 cursor-pointer rounded-lg border border-border p-3 hover:bg-muted/30 transition-colors">
+              <div>
+                <p className="text-sm font-medium text-foreground">Posílat úvodní SMS</p>
+                <p className="text-xs text-muted-foreground">Stojí 1 kredit, stejně jako ostatní SMS připomínky</p>
+              </div>
+              <div
+                role="switch"
+                aria-checked={form.watch("initialSmsEnabled")}
+                onClick={() => form.setValue("initialSmsEnabled", !form.watch("initialSmsEnabled"), { shouldDirty: true })}
+                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors ${
+                  form.watch("initialSmsEnabled") ? "bg-navy" : "bg-muted-foreground/30"
+                }`}
+              >
+                <span className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform ${form.watch("initialSmsEnabled") ? "translate-x-4" : "translate-x-0"}`} />
+              </div>
+            </label>
+            <div>
+              <Label htmlFor="initialSmsTemplate">Text zprávy</Label>
+              <Textarea
+                id="initialSmsTemplate"
+                {...form.register("initialSmsTemplate")}
+                rows={4}
+                className="mt-1"
+              />
+              {form.formState.errors.initialSmsTemplate && (
+                <p className="text-sm text-destructive mt-1">
+                  {form.formState.errors.initialSmsTemplate.message}
                 </p>
               )}
             </div>

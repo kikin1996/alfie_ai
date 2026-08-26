@@ -76,15 +76,22 @@ function isInWindow(now: Date, effectiveTime: Date, windowMinutes: number): bool
   return Math.abs(now.getTime() - effectiveTime.getTime()) / 60000 <= windowMinutes;
 }
 
-function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string, agencyName: string = ""): string {
+function fillTemplate(template: string, address: string, time: string, clientName: string, brokerName: string, brokerPhone: string, agencyName: string = "", date: string = ""): string {
   return template
     .replace(/\{address\}/g, address)
     .replace(/\{time\}/g, time)
+    .replace(/\{date\}/g, date)
     .replace(/\{clientName\}/g, clientName)
     .replace(/\{brokerName\}/g, brokerName)
     .replace(/\{brokerPhone\}/g, brokerPhone)
     .replace(/\{agencyName\}/g, agencyName);
 }
+
+// Úvodní SMS po založení prohlídky – hledáme prohlídky až tolik dní dopředu
+const NEW_VIEWING_WINDOW_DAYS = 21;
+
+const defaultInitialSmsTemplate =
+  "Dobrý den, {clientName}, potvrzujeme prohlídku nemovitosti na adrese {address} dne {date} v {time}. S pozdravem {brokerName}";
 
 export async function GET(request: NextRequest) {
   if (!checkCronAuth(request)) {
@@ -111,7 +118,7 @@ export async function GET(request: NextRequest) {
 
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
-    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status")
+    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status, initial_sms_sent")
     .not("status", "in", '("confirmed","cancelled")')
     .gte("event_start", new Date().toISOString());
 
@@ -124,7 +131,7 @@ export async function GET(request: NextRequest) {
   const userIds = [...new Set(viewings.map((v) => v.user_id))];
   const { data: settingsList } = await supabaseAdmin
     .from("user_settings")
-    .select("user_id, sms_template, notification_time_from, notification_time_to, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
+    .select("user_id, sms_template, initial_sms_enabled, initial_sms_template, notification_time_from, notification_time_to, whatsapp_phone, whatsapp_apikey, notification_channel, notification_email, broker_name, broker_phone, agency_name")
     .in("user_id", userIds);
 
   const settingsByUser = new Map((settingsList ?? []).map((s) => [s.user_id, s]));
@@ -187,11 +194,13 @@ export async function GET(request: NextRequest) {
     sms1h_sent: boolean; vapi_called: boolean; sms2h_enabled: boolean;
     sms1h_enabled: boolean; vapi_enabled: boolean;
     extra_notifications: ExtraNotification[]; status: string;
+    initial_sms_sent: boolean;
   }[]) {
     const userSettings = settingsByUser.get(v.user_id);
 
     const eventStart = new Date(v.event_start);
     const timeStr = eventStart.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
+    const dateStr = eventStart.toLocaleDateString("cs-CZ", { timeZone: "Europe/Prague", weekday: "long", day: "numeric", month: "long" });
     const name = v.client_name || "Klient";
     const code = shortCode(v.id);
     const agencyName = userSettings?.agency_name ?? "";
@@ -199,6 +208,35 @@ export async function GET(request: NextRequest) {
       "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.";
     const brokerName = userSettings?.broker_name ?? "";
     const brokerPhone = userSettings?.broker_phone ?? "";
+
+    // Úvodní SMS ihned po založení prohlídky (adresa, datum, čas) — 1 kredit
+    const newViewingWindowEnd = new Date(now.getTime() + NEW_VIEWING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    if (!v.initial_sms_sent && userSettings?.initial_sms_enabled !== false && hasSms && eventStart <= newViewingWindowEnd) {
+      const { data: claimed } = await supabaseAdmin
+        .from("viewings")
+        .update({ initial_sms_sent: true, updated_at: now.toISOString() })
+        .eq("id", v.id)
+        .eq("initial_sms_sent", false)
+        .select("id");
+      if (claimed && claimed.length > 0) {
+        const hasCredits = await deductCredits(v.user_id, 1);
+        if (hasCredits) {
+          const initialTemplate = userSettings?.initial_sms_template || defaultInitialSmsTemplate;
+          const body = withCode(fillTemplate(initialTemplate, v.address, timeStr, name, brokerName, brokerPhone, agencyName, dateStr), code);
+          const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
+          if (sent) {
+            if (userSettings) await notify(userSettings, `Úvodní SMS odeslána – ${name}`, `📨 Úvodní SMS odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n📅 ${dateStr} ${timeStr}`);
+            actions++;
+          } else {
+            await refundCredits(v.user_id, 1);
+            await supabaseAdmin.from("viewings").update({ initial_sms_sent: false, updated_at: now.toISOString() }).eq("id", v.id);
+          }
+        } else {
+          await supabaseAdmin.from("viewings").update({ initial_sms_sent: false, updated_at: now.toISOString() }).eq("id", v.id);
+          if (userSettings) await notify(userSettings, "⚠️ Nedostatek kreditů", `⚠️ Úvodní SMS pro ${name} (${v.address}) nebyla odeslána – nedostatek kreditů. Dobijte předplatné.`).catch(() => {});
+        }
+      }
+    }
 
     const startHour = parseHour(userSettings?.notification_time_from ?? "08:00");
     const endHour = parseHour(userSettings?.notification_time_to ?? "18:00");
