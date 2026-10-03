@@ -215,13 +215,13 @@ function SettingsPageInner() {
   }
 
   const calendarMessage = calendarStatus === "ok"
-    ? { icon: CheckCircle, text: "Google Kalendář je propojen.", className: "text-emerald-600 bg-emerald-50 border-emerald-200" }
+    ? { icon: CheckCircle, text: "Google Kalendář je propojen.", className: "text-emerald bg-emerald-bg border-emerald/30" }
     : calendarStatus === "error"
     ? { icon: XCircle, text: "Propojení se nepovedlo. Zkuste to znovu.", className: "text-destructive bg-destructive/10 border-destructive/20" }
     : calendarStatus === "no_refresh"
-    ? { icon: AlertCircle, text: 'Google nevrátil refresh token. Odhlaste se z Google a zkuste znovu s povolením "Offline access".', className: "text-amber-600 bg-amber-50 border-amber-200" }
+    ? { icon: AlertCircle, text: 'Google nevrátil refresh token. Odhlaste se z Google a zkuste znovu s povolením "Offline access".', className: "text-pending bg-pending-bg border-pending/30" }
     : calendarStatus === "config"
-    ? { icon: AlertCircle, text: "Na serveru chybí GOOGLE_CLIENT_ID nebo GOOGLE_CLIENT_SECRET.", className: "text-amber-600 bg-amber-50 border-amber-200" }
+    ? { icon: AlertCircle, text: "Na serveru chybí GOOGLE_CLIENT_ID nebo GOOGLE_CLIENT_SECRET.", className: "text-pending bg-pending-bg border-pending/30" }
     : null;
 
   return (
@@ -229,7 +229,7 @@ function SettingsPageInner() {
       {/* Modal – upozornění před propojením kalendáře */}
       {showCalendarModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-background rounded-2xl shadow-xl max-w-md w-full p-6 relative">
+          <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6 relative">
             <button
               type="button"
               onClick={() => setShowCalendarModal(false)}
@@ -238,8 +238,8 @@ function SettingsPageInner() {
               <X className="h-5 w-5" />
             </button>
             <div className="flex items-center gap-3 mb-4">
-              <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-amber-100">
-                <ShieldAlert className="h-5 w-5 text-amber-600" />
+              <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-pending-bg">
+                <ShieldAlert className="h-5 w-5 text-pending" />
               </div>
               <h2 className="text-lg font-semibold text-foreground">Upozornění Google</h2>
             </div>
@@ -267,7 +267,7 @@ function SettingsPageInner() {
         </div>
       )}
       <div className="mb-6 flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-white">
           <Calendar className="h-5 w-5" />
         </div>
         <div>
@@ -281,7 +281,7 @@ function SettingsPageInner() {
       </div>
 
       {calendarMessage && (
-        <div className={`mb-6 flex items-center gap-2 rounded-xl border p-3 shadow-xs ${calendarMessage.className}`}>
+        <div className={`mb-6 flex items-center gap-2 rounded-xl border p-3 ${calendarMessage.className}`}>
           <calendarMessage.icon className="h-5 w-5 shrink-0" />
           <p className="text-sm">{calendarMessage.text}</p>
         </div>
@@ -352,7 +352,7 @@ function SettingsPageInner() {
                 Prohlídky se načítají z událostí v Google Kalendáři.
               </p>
               {calendarConnected && (
-                <p className="text-sm text-emerald-600 mb-2 flex items-center gap-1">
+                <p className="text-sm text-emerald mb-2 flex items-center gap-1">
                   <CheckCircle className="h-4 w-4" /> Kalendář je propojen
                 </p>
               )}
@@ -465,7 +465,7 @@ function SettingsPageInner() {
                 {defaultExtras.map((n) => (
                   <div key={n.id} className="flex items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
                     <div className="flex items-center gap-2">
-                      <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${n.type === "sms" ? "bg-blue-50 text-blue-700" : "bg-violet-50 text-violet-700"}`}>
+                      <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${n.type === "sms" ? "bg-accent-blue/10 text-accent-blue" : "bg-violet-50 text-violet-700"}`}>
                         {n.type === "sms" ? "SMS" : "Hovor"}
                       </span>
                       <span className="text-sm text-foreground">{n.label || `${n.minutesBefore} min před`}</span>
@@ -714,7 +714,7 @@ function SettingsPageInner() {
                     Test WhatsApp
                   </Button>
                   {testWhatsappResult && (
-                    <span className={`text-sm ${testWhatsappResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                    <span className={`text-sm ${testWhatsappResult.ok ? "text-emerald" : "text-destructive"}`}>
                       {testWhatsappResult.ok ? <CheckCircle className="h-4 w-4 inline mr-1" /> : <XCircle className="h-4 w-4 inline mr-1" />}
                       {testWhatsappResult.msg}
                     </span>
@@ -775,7 +775,7 @@ function SettingsPageInner() {
                     Test Email
                   </Button>
                   {testEmailResult && (
-                    <span className={`text-sm ${testEmailResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                    <span className={`text-sm ${testEmailResult.ok ? "text-emerald" : "text-destructive"}`}>
                       {testEmailResult.ok ? <CheckCircle className="h-4 w-4 inline mr-1" /> : <XCircle className="h-4 w-4 inline mr-1" />}
                       {testEmailResult.msg}
                     </span>
@@ -792,7 +792,7 @@ function SettingsPageInner() {
           </p>
         )}
         {saveOk && (
-          <p className="text-sm text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 flex items-center gap-2">
+          <p className="text-sm text-emerald bg-emerald-bg border border-emerald/30 rounded-lg px-3 py-2 flex items-center gap-2">
             <CheckCircle className="h-4 w-4" /> Nastavení uloženo
           </p>
         )}

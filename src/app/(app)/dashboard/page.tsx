@@ -51,7 +51,7 @@ function LiveClock() {
   }, []);
 
   return (
-    <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 py-1.5 text-sm font-mono tabular-nums text-muted-foreground shadow-xs">
+    <div className="flex items-center gap-1.5 rounded-xl border border-border/60 bg-card px-3 py-1.5 text-sm font-mono tabular-nums text-muted-foreground">
       <Clock className="h-3.5 w-3.5" />
       {time}
     </div>
@@ -109,7 +109,7 @@ function NotifFlag({ sent, enabled, label, onToggle, disabled }: NotifFlagProps)
     ? "bg-muted/40 text-muted-foreground/40 border-border/40 cursor-default opacity-50"
     : localEnabled
     ? "bg-muted text-muted-foreground border-border cursor-pointer hover:border-muted-foreground/40 hover:bg-muted/80"
-    : "bg-red-50 text-red-500 border-red-200 cursor-pointer hover:bg-red-100";
+    : "bg-cancelled-bg text-cancelled border-cancelled/30 cursor-pointer hover:bg-cancelled-bg";
 
   return (
     <button
@@ -431,7 +431,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
   if (removed) return null;
 
   return (
-    <Card className="border-border/60 transition-shadow hover:shadow-lifted">
+    <Card className="border-border/60 transition-shadow">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
@@ -455,7 +455,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
                 type="button"
                 onClick={saveEdit}
                 disabled={saving}
-                className="p-1 rounded text-emerald-600 hover:bg-emerald-50 transition-colors"
+                className="p-1 rounded text-emerald hover:bg-emerald-bg transition-colors"
                 title="Uložit"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
@@ -473,7 +473,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
                 <button
                   type="button"
                   onClick={() => setConfirmCancel(true)}
-                  className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-red-50 transition-colors"
+                  className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-cancelled-bg transition-colors"
                   title="Zrušit prohlídku"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -516,7 +516,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
             <p><span className="font-medium text-foreground">Čas:</span> {format(start, "HH:mm", { locale: cs })}</p>
             {viewing.clientPhone && <p><span className="font-medium text-foreground">Tel.:</span> {viewing.clientPhone}</p>}
             {viewing.status === "confirmed" && (
-              <p className="text-emerald-600 font-medium">
+              <p className="text-emerald font-medium">
                 ✓ Potvrzeno po{" "}
                 {viewing.vapiCalled ? "hovoru 30min" : viewing.sms1hSent ? "SMS 1h" : viewing.sms2hSent ? "SMS 2h" : "SMS"}
               </p>
@@ -525,8 +525,8 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               <p className="text-destructive font-medium">✕ Klient zrušil prohlídku</p>
             )}
             {viewing.vapiCalled && (viewing.vapiCallId || callResult) && (
-              <div className="mt-0.5 rounded-md bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-xs border border-blue-200 dark:border-blue-800">
-                <p className="font-semibold text-blue-700 dark:text-blue-300 text-[10px] uppercase tracking-wide mb-1">Výsledek hovoru:</p>
+              <div className="mt-0.5 rounded-md bg-accent-blue/10 dark:bg-blue-950/30 px-3 py-2 text-xs border border-accent-blue/30 dark:border-accent-blue/30">
+                <p className="font-semibold text-primary text-[10px] mb-1">Výsledek hovoru:</p>
                 {!callResult && !loadingCall && (
                   <button
                     onClick={async () => {
@@ -536,7 +536,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
                         if (r.ok) setCallResult(await r.json());
                       } finally { setLoadingCall(false); }
                     }}
-                    className="text-blue-600 underline text-xs"
+                    className="text-accent-blue underline text-xs"
                   >
                     Načíst shrnutí a přepis
                   </button>
@@ -549,12 +549,12 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
                       <>
                         <button
                           onClick={() => setShowTranscript(v => !v)}
-                          className="text-blue-600 underline text-xs mt-1"
+                          className="text-accent-blue underline text-xs mt-1"
                         >
                           {showTranscript ? "Skrýt přepis" : "Zobrazit přepis hovoru"}
                         </button>
                         {showTranscript && (
-                          <pre className="mt-1 whitespace-pre-wrap text-muted-foreground font-sans text-[11px] leading-relaxed border-t border-blue-200 pt-1">
+                          <pre className="mt-1 whitespace-pre-wrap text-muted-foreground font-sans text-[11px] leading-relaxed border-t border-accent-blue/30 pt-1">
                             {callResult.transcript}
                           </pre>
                         )}
@@ -569,7 +569,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
             )}
             {viewing.clientReply && (
               <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">
-                <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Odpověď klienta:</p>
+                <p className="font-semibold text-foreground/50 text-[10px] mb-1">Odpověď klienta:</p>
                 <p className="text-foreground">{viewing.clientReply}</p>
               </div>
             )}
@@ -577,7 +577,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
         )}
 
         {confirmCancel && (
-          <div className="flex items-center gap-2 pt-1 border-t border-red-100">
+          <div className="flex items-center gap-2 pt-1 border-t border-cancelled/30">
             <span className="text-sm text-destructive font-medium">Opravdu zrušit a smazat z kalendáře?</span>
             <Button
               size="xs"
@@ -675,10 +675,10 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               disabled={triggerState.sms === "busy"}
               className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border transition-all ${
                 triggerState.sms === "ok"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  ? "bg-emerald-bg text-emerald border-emerald/30"
                   : triggerState.sms === "err"
                   ? "bg-destructive/10 text-destructive border-destructive/20"
-                  : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                  : "bg-pending-bg text-pending border-pending/30 hover:bg-pending-bg"
               }`}
             >
               {triggerState.sms === "busy" ? (
@@ -697,10 +697,10 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               disabled={triggerState.vapi === "busy"}
               className={`inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full border transition-all ${
                 triggerState.vapi === "ok"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                  ? "bg-emerald-bg text-emerald border-emerald/30"
                   : triggerState.vapi === "err"
                   ? "bg-destructive/10 text-destructive border-destructive/20"
-                  : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                  : "bg-pending-bg text-pending border-pending/30 hover:bg-pending-bg"
               }`}
             >
               {triggerState.vapi === "busy" ? (
@@ -872,7 +872,7 @@ export default function DashboardPage() {
     <div className="p-6">
       <div className="flex flex-col gap-3 mb-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-white">
             <Calendar className="h-5 w-5" />
           </div>
           <div>
@@ -888,7 +888,7 @@ export default function DashboardPage() {
             <p
               className={
                 syncMessage.type === "ok"
-                  ? "text-sm text-emerald-600"
+                  ? "text-sm text-emerald"
                   : "text-sm text-destructive"
               }
             >
@@ -934,29 +934,29 @@ export default function DashboardPage() {
 
       {/* Upozornění na nedostatek kreditů */}
       {hasSubscription === false && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/10 px-5 py-4 shadow-soft">
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 px-5 py-4">
           <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
           <div>
             <p className="font-semibold text-destructive">Nemáte aktivní předplatné</p>
             <p className="text-sm text-destructive/80 mt-0.5">
-              SMS ani VAPI hovory nebudou odesílány. <a href="/subscription" className="underline font-medium">Vyberte plán →</a>
+              SMS ani VAPI hovory nebudou odesílány. <a href="/subscription" className="underline font-medium">Vyberte plán</a>
             </p>
           </div>
         </div>
       )}
       {hasSubscription === true && credits !== null && credits === 0 && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/10 px-5 py-4 shadow-soft">
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 px-5 py-4">
           <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
           <div>
             <p className="font-semibold text-destructive">Nemáte žádné kredity</p>
             <p className="text-sm text-destructive/80 mt-0.5">
-              Žádné SMS ani hovory nebudou odeslány. <a href="/subscription" className="underline font-medium">Dobít kredity →</a>
+              Žádné SMS ani hovory nebudou odeslány. <a href="/subscription" className="underline font-medium">Dobít kredity</a>
             </p>
           </div>
         </div>
       )}
       {hasSubscription === true && credits !== null && credits > 0 && credits < 5 && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-destructive/20 bg-destructive/10 px-5 py-4 shadow-soft">
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 px-5 py-4">
           <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
           <div>
             <p className="font-semibold text-destructive">
@@ -964,33 +964,33 @@ export default function DashboardPage() {
             </p>
             <p className="text-sm text-destructive/80 mt-0.5">
               VAPI hovory (5 kreditů) nebudou uskutečněny. SMS ještě fungují.{" "}
-              <a href="/subscription" className="underline font-medium">Dobít kredity →</a>
+              <a href="/subscription" className="underline font-medium">Dobít kredity</a>
             </p>
           </div>
         </div>
       )}
       {hasSubscription === true && credits !== null && credits >= 5 && credits < 15 && (
-        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/10 px-5 py-4 shadow-soft">
-          <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600 mt-0.5" />
+        <div className="mb-4 flex items-start gap-3 rounded-lg border border-pending/30/25 bg-pending-bg0/10 px-5 py-4">
+          <AlertTriangle className="h-5 w-5 shrink-0 text-pending mt-0.5" />
           <div>
-            <p className="font-semibold text-amber-700 dark:text-amber-400">
+            <p className="font-semibold text-pending dark:text-pending">
               Kredity se blíží k vyčerpání — zbývá {credits} kreditů
             </p>
-            <p className="text-sm text-amber-700/80 dark:text-amber-400/80 mt-0.5">
+            <p className="text-sm text-pending/80 dark:text-pending/80 mt-0.5">
               Brzy nebudete moci odesílat SMS ani uskutečňovat hovory.{" "}
-              <a href="/subscription" className="underline font-medium">Dobít kredity →</a>
+              <a href="/subscription" className="underline font-medium">Dobít kredity</a>
             </p>
           </div>
         </div>
       )}
 
       {/* Pokyny pro formát události v Google Kalendáři */}
-      <div className="mb-4 rounded-2xl border border-border/60 bg-muted/30 px-5 py-4 shadow-xs">
+      <div className="mb-4 rounded-lg border border-border/60 bg-muted/30 px-5 py-4">
         <p className="text-sm font-semibold text-foreground mb-1.5">Jak přidat prohlídku do Google Kalendáře</p>
         <p className="text-sm text-muted-foreground mb-2">
           Název události pište v tomto pořadí, oddělené čárkami:
         </p>
-        <code className="block rounded-xl bg-card border border-border/60 px-3 py-2 text-sm font-mono text-foreground mb-2 shadow-xs">
+        <code className="block rounded-xl bg-card border border-border/60 px-3 py-2 text-sm font-mono text-foreground mb-2">
           Jméno klienta, Ulice, Město, +420XXXXXXXXX, prohlídka
         </code>
         <p className="text-xs text-muted-foreground">

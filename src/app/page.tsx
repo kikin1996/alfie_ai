@@ -3,20 +3,46 @@ import { createClient } from "@/lib/supabase-server";
 import Link from "next/link";
 import Image from "next/image";
 import { NavbarAuth } from "@/components/NavbarAuth";
-import {
-  CalendarDays,
-  MessageSquare,
-  Phone,
-  Send,
-  CheckCircle2,
-  ArrowRight,
-  LayoutDashboard,
-  RefreshCw,
-  Bell,
-} from "lucide-react";
+
+const features = [
+  {
+    title: "Sync z Google Kalendáře",
+    desc: "Prohlídky se načtou automaticky každý večer. Stačí správně zapsat událost.",
+  },
+  {
+    title: "SMS 2 hodiny a 1 hodinu předem",
+    desc: "Šablona s adresou a časem, odeslaná přes SMSbrána.cz.",
+  },
+  {
+    title: "Potvrzení od klienta",
+    desc: "AI vyhodnotí odpověď klienta jako ano, ne nebo nejasné a aktualizuje stav.",
+  },
+  {
+    title: "AI telefonní hovor",
+    desc: "VAPI asistent zavolá klientovi 30 minut před prohlídkou.",
+  },
+  {
+    title: "Telegram notifikace",
+    desc: "Při každém odeslání SMS nebo odpovědi klienta dostanete zprávu.",
+  },
+  {
+    title: "Vlastní připomínky",
+    desc: "Přidejte libovolný počet připomínek, SMS nebo hovor v čase, který si nastavíte.",
+  },
+  {
+    title: "Přehled prohlídek",
+    desc: "Seznam i kalendářový pohled se stavy, které se mění v reálném čase.",
+  },
+];
+
+const timeline = [
+  { at: "15:00", what: "SMS: připomínka dvě hodiny předem", state: "Odesláno" },
+  { at: "16:00", what: "SMS: připomínka hodinu předem", state: "Odesláno" },
+  { at: "16:30", what: "AI hovor klientovi", state: "Potvrzeno" },
+  { at: "17:00", what: "Prohlídka", state: "Klient potvrdil" },
+];
 
 export default async function HomePage() {
-  // Přihlášený uživatel → rovnou na dashboard
   try {
     const supabase = await createClient();
     const {
@@ -28,23 +54,12 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden text-foreground">
-      {/* pastelový mesh gradient přes celou stránku */}
-      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-sky-50 via-white to-violet-100" />
-      <div className="pointer-events-none fixed -left-32 -top-32 -z-10 h-[30rem] w-[30rem] rounded-full bg-violet-400/50 blur-[100px]" />
-      <div className="pointer-events-none fixed -right-24 -top-16 -z-10 h-[28rem] w-[28rem] rounded-full bg-sky-300/50 blur-[100px]" />
-      <div className="pointer-events-none fixed right-1/4 bottom-0 -z-10 h-80 w-80 rounded-full bg-pink-300/40 blur-[100px]" />
-      <div className="pointer-events-none fixed left-1/4 bottom-0 -z-10 h-80 w-80 rounded-full bg-purple-300/40 blur-[100px]" />
-      <div className="pointer-events-none fixed left-1/2 top-1/3 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-amber-100/30 blur-[100px]" />
-
-      {/* ── Navbar ───────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-black/5 bg-white/75 backdrop-blur-xl">
+    <div className="min-h-screen text-foreground">
+      <header className="border-b border-border">
         <div className="container flex h-20 items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <Image src="/logo.png" alt="Renote" width={54} height={54} className="h-[54px] w-[54px]" priority />
-            <span className="font-display text-lg font-bold tracking-tight text-navy">
-              Renote
-            </span>
+            <Image src="/logo.png" alt="Renote" width={44} height={44} className="h-11 w-11" priority />
+            <span className="font-display text-2xl font-medium text-foreground">Renote</span>
           </Link>
           <nav className="flex items-center gap-3">
             <NavbarAuth />
@@ -52,203 +67,101 @@ export default async function HomePage() {
         </div>
       </header>
 
-      {/* ── Hero ─────────────────────────────────────────────────── */}
-      <section className="relative py-28 sm:py-36">
-        <div className="container relative text-center">
-          <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-black/5 bg-white/70 px-4 py-1.5 text-sm text-muted-foreground shadow-soft backdrop-blur-sm">
-            <CalendarDays className="h-4 w-4 text-navy" />
-            Automatizace prohlídek nemovitostí
-          </div>
-          <h1 className="font-display text-4xl font-bold leading-[1.1] tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-            Nikdy nezapomeňte připomenout{" "}
-            <span className="bg-gradient-to-r from-navy to-accent-blue bg-clip-text text-transparent">
-              prohlídku
-            </span>
+      <section className="container grid items-center gap-16 py-20 lg:grid-cols-[1.1fr_1fr] lg:py-28">
+        <div>
+          <h1 className="font-display text-5xl font-medium leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+            Klient dostane připomínku. Vy si na ni nemusíte vzpomenout.
           </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            Renote propojí váš Google Kalendář s SMS notifikacemi a AI hovory.
-            Klienti dostanou automatické připomínky – vy se soustředíte na prodej.
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
+            Renote propojí váš Google Kalendář s SMS a AI hovory. Připomínky odejdou
+            ve správný čas a vy vidíte, které prohlídky klienti potvrdili.
           </p>
-          <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+          <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-7 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
+              className="inline-flex items-center justify-center rounded-md bg-primary px-6 py-3 text-base font-medium text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Začít zdarma
-              <ArrowRight className="h-5 w-5" />
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-7 py-3.5 text-base font-semibold text-slate-700 shadow-soft transition-all hover:bg-slate-50"
+              className="inline-flex items-center justify-center px-2 py-3 text-base font-medium text-foreground underline decoration-border underline-offset-4 hover:decoration-foreground"
             >
-              Přihlásit se
+              Už mám účet
             </Link>
           </div>
         </div>
+
+        <figure className="rounded-lg border border-border bg-card p-6 sm:p-8">
+          <figcaption className="flex items-baseline justify-between gap-4 border-b border-border pb-4">
+            <span className="font-display text-xl font-medium">Prohlídka, Korunní 42</span>
+            <span className="text-sm text-muted-foreground">středa 17:00</span>
+          </figcaption>
+
+          <ol className="relative mt-6 space-y-6 border-l border-border pl-6">
+            {timeline.map((step) => (
+              <li key={step.at} className="relative">
+                <span className="absolute -left-[31px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-card bg-foreground" aria-hidden />
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <span className="text-sm tabular-nums text-muted-foreground">{step.at}</span>
+                  <span className="text-sm font-medium text-emerald">{step.state}</span>
+                </div>
+                <p className="mt-1 text-base">{step.what}</p>
+              </li>
+            ))}
+          </ol>
+        </figure>
       </section>
 
-      {/* ── Jak to funguje ────────────────────────────────────────── */}
-      <section className="py-20">
-        <div className="container">
-          <div className="mb-12 text-center">
-            <h2 className="font-display text-3xl font-bold text-navy">
-              Jak Renote funguje?
-            </h2>
-            <p className="mt-3 text-muted-foreground">
-              Tři kroky a prohlídky se řídí samy.
+      <section className="border-t border-border py-20">
+        <div className="container grid gap-12 lg:grid-cols-[1fr_2fr]">
+          <div>
+            <h2 className="font-display text-3xl font-medium tracking-tight">Co Renote dělá</h2>
+            <p className="mt-3 max-w-sm text-muted-foreground">
+              Celý postup od zapsání prohlídky po potvrzení klientem bez ruční práce.
             </p>
           </div>
-
-          <div className="grid gap-8 md:grid-cols-3">
-            {[
-              {
-                step: "1",
-                icon: CalendarDays,
-                title: "Propojte Google Kalendář",
-                desc: "Přidejte do události klíčové slovo (např. #prohlidka) a zadejte tel. číslo a adresu klienta. Renote si vše automaticky načte.",
-                color: "bg-navy",
-              },
-              {
-                step: "2",
-                icon: MessageSquare,
-                title: "SMS jdou samy",
-                desc: "2 hodiny a 1 hodinu před prohlídkou odešle systém SMS s potvrzením. Klient odpoví ANO nebo NE – vy vidíte status v dashboardu.",
-                color: "bg-accent-blue",
-              },
-              {
-                step: "3",
-                icon: Phone,
-                title: "AI hovor 30 minut před",
-                desc: "Volitelně zavolá AI asistent klientovi 30 minut před prohlídkou. Automaticky, bez vaší účasti.",
-                color: "bg-navy",
-              },
-            ].map((item) => (
-              <div key={item.step} className="group relative rounded-2xl border border-border/60 bg-card p-8 shadow-card transition-all hover:-translate-y-1 hover:shadow-lifted">
-                <div className={`mb-5 inline-flex h-12 w-12 items-center justify-center rounded-xl ${item.color} text-white shadow-soft transition-transform group-hover:scale-110`}>
-                  <item.icon className="h-6 w-6" />
-                </div>
-                <div className="absolute right-6 top-6 font-display text-5xl font-bold text-muted-foreground/15 select-none">
-                  {item.step}
-                </div>
-                <h3 className="mb-2 font-display text-xl font-semibold text-navy">
-                  {item.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {item.desc}
-                </p>
-              </div>
+          <ul className="divide-y divide-border border-y border-border">
+            {features.map((f) => (
+              <li key={f.title} className="grid gap-2 py-6 sm:grid-cols-[1fr_1.4fr] sm:gap-10">
+                <h3 className="font-medium text-foreground">{f.title}</h3>
+                <p className="text-muted-foreground">{f.desc}</p>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
-      {/* ── Funkce ───────────────────────────────────────────────── */}
-      <section className="py-20">
-        <div className="container">
-          <div className="mb-12 text-center">
-            <h2 className="font-display text-3xl font-bold text-navy">
-              Vše na jednom místě
+      <section className="bg-primary py-20 text-primary-foreground">
+        <div className="container flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
+          <div>
+            <h2 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">
+              Nastavení trvá méně než pět minut.
             </h2>
-            <p className="mt-3 text-muted-foreground">
-              Komplexní řešení pro makléře i realitní kanceláře.
+            <p className="mt-3 max-w-xl text-primary-foreground/80">
+              Zaregistrujte se, propojte Google Kalendář a první prohlídka se připomene sama.
             </p>
           </div>
-
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: RefreshCw,
-                title: "Sync z Google Kalendáře",
-                desc: "Automatický import prohlídek každý večer. Stačí správně zapsat událost.",
-              },
-              {
-                icon: MessageSquare,
-                title: "SMS 2h a 1h před",
-                desc: "Šablona zprávy s adresou a časem, odeslaná přes SMSbrána.cz.",
-              },
-              {
-                icon: CheckCircle2,
-                title: "Potvrzení od klienta",
-                desc: "AI analyzuje odpověď klienta (ANO / NE / nejasné) a aktualizuje status.",
-              },
-              {
-                icon: Phone,
-                title: "AI telefonní hovor",
-                desc: "VAPI asistent zavolá klientovi 30 minut před prohlídkou.",
-              },
-              {
-                icon: Send,
-                title: "Telegram notifikace",
-                desc: "Vy dostanete zprávu na Telegram při každém odeslání SMS nebo odpovědi klienta.",
-              },
-              {
-                icon: Bell,
-                title: "Vlastní notifikace",
-                desc: "Přidejte libovolný počet připomínek – SMS nebo hovor v čase, který si nastavíte.",
-              },
-              {
-                icon: LayoutDashboard,
-                title: "Přehledný dashboard",
-                desc: "Seznam a kalendářový pohled na všechny prohlídky se stavy v reálném čase.",
-              },
-            ].map((f) => (
-              <div key={f.title} className="flex gap-4 rounded-2xl border border-border/60 bg-card p-5 shadow-card transition-all hover:-translate-y-0.5 hover:shadow-lifted">
-                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-blue/10">
-                  <f.icon className="h-5 w-5 text-accent-blue" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-navy">{f.title}</h3>
-                  <p className="mt-1 text-sm text-muted-foreground">{f.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Link
+            href="/register"
+            className="inline-flex shrink-0 items-center justify-center rounded-md bg-background px-6 py-3 text-base font-medium text-foreground transition-colors hover:bg-background/90"
+          >
+            Začít zdarma
+          </Link>
         </div>
       </section>
 
-      {/* ── CTA ──────────────────────────────────────────────────── */}
-      <section className="py-20">
-        <div className="container">
-          <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-white/60 px-6 py-16 text-center shadow-lifted backdrop-blur-xl sm:py-20">
-            <div className="pointer-events-none absolute left-1/2 top-0 h-72 w-[40rem] -translate-x-1/2 rounded-full bg-accent-blue/20 blur-3xl" />
-            <div className="relative">
-              <h2 className="font-display text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                Připraveni automatizovat prohlídky?
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-muted-foreground">
-                Zaregistrujte se a propojte svůj Google Kalendář. Nastavení trvá méně než 5 minut.
-              </p>
-              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                <Link
-                  href="/register"
-                  className="inline-flex items-center gap-2 rounded-full bg-gradient-brand px-8 py-3.5 text-base font-semibold text-white shadow-lifted transition-all hover:brightness-110 hover:shadow-glow"
-                >
-                  Začít zdarma
-                  <ArrowRight className="h-5 w-5" />
-                </Link>
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-white px-8 py-3.5 text-base font-semibold text-slate-700 shadow-soft transition-all hover:bg-slate-50"
-                >
-                  Mám účet – přihlásit se
-                </Link>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Footer ───────────────────────────────────────────────── */}
-      <footer className="border-t border-border/70 py-6">
-        <div className="container flex flex-col items-center justify-between gap-2 text-sm text-muted-foreground sm:flex-row">
+      <footer className="border-t border-border py-8">
+        <div className="container flex flex-col items-center justify-between gap-3 text-sm text-muted-foreground sm:flex-row">
           <div className="flex items-center gap-2">
-            <Image src="/logo.png" alt="Renote" width={18} height={18} className="h-[18px] w-[18px]" />
-            <span className="font-display font-semibold text-navy">Renote</span>
+            <Image src="/logo.png" alt="" width={18} height={18} className="h-[18px] w-[18px]" />
+            <span className="font-display font-medium text-foreground">Renote</span>
           </div>
-          <p>© {new Date().getFullYear()} Renote. Všechna práva vyhrazena.</p>
-          <div className="flex gap-4">
-            <Link href="/login" className="hover:text-foreground transition-colors">Přihlásit se</Link>
-            <Link href="/register" className="hover:text-foreground transition-colors">Registrovat se</Link>
+          <p>© {new Date().getFullYear()} Renote</p>
+          <div className="flex gap-5">
+            <Link href="/privacy" className="transition-colors hover:text-foreground">Ochrana osobních údajů</Link>
+            <Link href="/terms" className="transition-colors hover:text-foreground">Podmínky užití</Link>
+            <Link href="/login" className="transition-colors hover:text-foreground">Přihlásit se</Link>
           </div>
         </div>
       </footer>

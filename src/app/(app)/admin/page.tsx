@@ -77,7 +77,7 @@ function SmsTestPanel({ onSend, onClose }: { onSend: (phone: string) => Promise<
         <Button type="button" variant="ghost" size="sm" onClick={onClose} className="shrink-0">Zrušit</Button>
       </div>
       {result && (
-        <p className={`text-xs flex items-center gap-1 ${result.ok ? "text-emerald-600" : "text-destructive"}`}>
+        <p className={`text-xs flex items-center gap-1 ${result.ok ? "text-emerald" : "text-destructive"}`}>
           {result.ok ? <CheckCircle className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
           {result.message}
         </p>
@@ -172,10 +172,10 @@ function VapiTestPanel({
   };
 
   const responseIcon = callResult?.clientResponse === "confirmed"
-    ? <ThumbsUp className="h-4 w-4 text-emerald-600" />
+    ? <ThumbsUp className="h-4 w-4 text-emerald" />
     : callResult?.clientResponse === "cancelled"
     ? <ThumbsDown className="h-4 w-4 text-destructive" />
-    : <HelpCircle className="h-4 w-4 text-amber-500" />;
+    : <HelpCircle className="h-4 w-4 text-pending" />;
 
   const responseLabel = callResult?.clientResponse === "confirmed"
     ? "Klient potvrdil příchod (ANO)"
@@ -185,7 +185,7 @@ function VapiTestPanel({
 
   return (
     <div className="mt-3 rounded-lg border border-dashed border-border bg-muted/40 p-4 space-y-3">
-      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Údaje testovací prohlídky</p>
+      <p className="text-xs font-medium text-muted-foreground">Údaje testovací prohlídky</p>
       <div className="grid grid-cols-2 gap-3">
         <div className="col-span-2">
           <Label className="text-xs">Jméno klienta</Label>
@@ -246,9 +246,9 @@ function VapiTestPanel({
             <div className="space-y-2 pt-1 border-t border-border">
               {/* Odpověď klienta */}
               <div className={`flex items-center gap-2 rounded-md px-2 py-1.5 ${
-                callResult.clientResponse === "confirmed" ? "bg-emerald-50 text-emerald-700" :
+                callResult.clientResponse === "confirmed" ? "bg-emerald-bg text-emerald" :
                 callResult.clientResponse === "cancelled" ? "bg-destructive/10 text-destructive" :
-                "bg-amber-50 text-amber-700"
+                "bg-pending-bg text-pending"
               }`}>
                 {responseIcon}
                 <span className="text-xs font-medium">{responseLabel}</span>
@@ -650,7 +650,7 @@ export default function AdminPage() {
                 )}
               </Button>
               {waTestState === "ok" && (
-                <p className="text-sm text-emerald-600 flex items-center gap-1">
+                <p className="text-sm text-emerald flex items-center gap-1">
                   <CheckCircle className="h-4 w-4" /> Zpráva odeslána – zkontrolujte WhatsApp
                 </p>
               )}
@@ -672,7 +672,7 @@ export default function AdminPage() {
             )}
           </Button>
           {saveOk && (
-            <p className="text-sm text-emerald-600 flex items-center gap-1">
+            <p className="text-sm text-emerald flex items-center gap-1">
               <CheckCircle className="h-4 w-4" /> Uloženo
             </p>
           )}

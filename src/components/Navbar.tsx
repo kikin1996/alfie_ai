@@ -31,7 +31,7 @@ export default function Navbar() {
   }, [user]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-border/70 bg-card/70 backdrop-blur-xl supports-[backdrop-filter]:bg-card/60">
+    <header className="sticky top-0 z-50 border-b border-border bg-background">
       <div className="container flex h-16 items-center justify-between">
         <Link href="/" className="flex items-center gap-2.5 group">
           <Image
@@ -48,7 +48,7 @@ export default function Navbar() {
         </Link>
 
         <div className="flex items-center gap-2">
-        <nav className="flex items-center gap-1 rounded-2xl border border-border/60 bg-muted/40 p-1">
+        <nav className="flex items-center gap-6">
           {navItems.map((item) => {
             const isActive = pathname === item.path;
             const isSubscription = item.path === "/subscription";
@@ -58,10 +58,10 @@ export default function Navbar() {
               <Link
                 key={item.path}
                 href={item.path}
-                className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all ${
+                className={`flex items-center gap-2 border-b-2 py-2 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-gradient-navy text-primary-foreground shadow-soft"
-                    : "text-muted-foreground hover:bg-card hover:text-foreground hover:shadow-xs"
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground"
                 }`}
               >
                 <item.icon className="h-4 w-4" />
@@ -71,7 +71,7 @@ export default function Navbar() {
                     lowCredits
                       ? "bg-destructive text-destructive-foreground"
                       : medCredits
-                      ? "bg-amber-500 text-white"
+                      ? "bg-pending-bg0 text-white"
                       : isActive
                       ? "bg-primary-foreground/20 text-primary-foreground"
                       : "bg-emerald-bg text-emerald"
@@ -87,10 +87,10 @@ export default function Navbar() {
           {isAdmin && (
             <Link
               href="/admin"
-              className={`flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 border-b-2 py-2 text-sm font-medium transition-colors ${
                 pathname === "/admin"
-                  ? "bg-gradient-navy text-primary-foreground shadow-soft"
-                  : "text-muted-foreground hover:bg-card hover:text-foreground hover:shadow-xs"
+                  ? "border-primary text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
               <ShieldCheck className="h-4 w-4" />

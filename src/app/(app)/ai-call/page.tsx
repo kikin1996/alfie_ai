@@ -39,9 +39,9 @@ interface CallLog {
 }
 
 const OUTCOME_META: Record<CallOutcome, { label: string; color: string; bg: string; border: string }> = {
-  uspesny:   { label: "Úspěšný",  color: "text-emerald-700", bg: "bg-emerald-50",  border: "border-emerald-200" },
-  neutralni: { label: "Neutrální", color: "text-amber-700",   bg: "bg-amber-50",    border: "border-amber-200" },
-  odmitnuti: { label: "Odmítnutí", color: "text-red-700",     bg: "bg-red-50",      border: "border-red-200" },
+  uspesny:   { label: "Úspěšný",  color: "text-emerald", bg: "bg-emerald-bg",  border: "border-emerald/30" },
+  neutralni: { label: "Neutrální", color: "text-pending",   bg: "bg-pending-bg",    border: "border-pending/30" },
+  odmitnuti: { label: "Odmítnutí", color: "text-cancelled",     bg: "bg-cancelled-bg",      border: "border-cancelled/30" },
 };
 
 const STORAGE_KEY = "renote_ai_call_config";
@@ -58,13 +58,13 @@ function newRecord(): CallRecord {
 
 const STATUS_META: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   pending:      { label: "Čeká",          color: "text-muted-foreground", icon: <Clock className="h-3.5 w-3.5" /> },
-  calling:      { label: "Spouštím…",     color: "text-blue-600",         icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
-  ringing:      { label: "Vyzvání",       color: "text-blue-600",         icon: <PhoneCall className="h-3.5 w-3.5 animate-pulse" /> },
-  "in-progress":{ label: "Probíhá",       color: "text-emerald-600",      icon: <PhoneCall className="h-3.5 w-3.5 animate-pulse" /> },
-  ended:        { label: "Ukončeno",      color: "text-emerald-600",      icon: <CheckCircle className="h-3.5 w-3.5" /> },
+  calling:      { label: "Spouštím…",     color: "text-accent-blue",         icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> },
+  ringing:      { label: "Vyzvání",       color: "text-accent-blue",         icon: <PhoneCall className="h-3.5 w-3.5 animate-pulse" /> },
+  "in-progress":{ label: "Probíhá",       color: "text-emerald",      icon: <PhoneCall className="h-3.5 w-3.5 animate-pulse" /> },
+  ended:        { label: "Ukončeno",      color: "text-emerald",      icon: <CheckCircle className="h-3.5 w-3.5" /> },
   failed:       { label: "Selhalo",       color: "text-destructive",      icon: <XCircle className="h-3.5 w-3.5" /> },
-  "no-answer":  { label: "Nezvedá",       color: "text-amber-600",        icon: <XCircle className="h-3.5 w-3.5" /> },
-  busy:         { label: "Obsazeno",      color: "text-amber-600",        icon: <XCircle className="h-3.5 w-3.5" /> },
+  "no-answer":  { label: "Nezvedá",       color: "text-pending",        icon: <XCircle className="h-3.5 w-3.5" /> },
+  busy:         { label: "Obsazeno",      color: "text-pending",        icon: <XCircle className="h-3.5 w-3.5" /> },
   cancelled:    { label: "Zrušeno",       color: "text-muted-foreground", icon: <Square className="h-3.5 w-3.5" /> },
 };
 
@@ -222,7 +222,7 @@ export default function AiCallPage() {
             <CardTitle className="text-base flex items-center gap-2">
               VAPI konfigurace
               {configValid && (
-                <span className="text-[11px] font-normal text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">Uloženo</span>
+                <span className="text-[11px] font-normal text-emerald bg-emerald-bg border border-emerald/30 px-2 py-0.5 rounded-full">Uloženo</span>
               )}
             </CardTitle>
             {configOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
@@ -368,7 +368,7 @@ export default function AiCallPage() {
                           {!log || log.status === "pending" ? (
                             <p className="text-xs text-muted-foreground italic">Odpověď se zobrazí po skončení hovoru…</p>
                           ) : log.status === "calling" || log.status === "ringing" || log.status === "in-progress" ? (
-                            <p className="text-xs text-blue-600 flex items-center gap-1.5">
+                            <p className="text-xs text-accent-blue flex items-center gap-1.5">
                               <Loader2 className="h-3.5 w-3.5 animate-spin" /> Hovor probíhá, čekám na výsledek…
                             </p>
                           ) : log.error ? (

@@ -42,8 +42,8 @@ function CallResultBox({ viewingId, callId, initialSummary, initialTranscript }:
   if (!callId && !result) return null;
 
   return (
-    <div className="mt-0.5 rounded-md bg-blue-50 dark:bg-blue-950/30 px-3 py-2 text-xs border border-blue-200 dark:border-blue-800">
-      <p className="font-semibold text-blue-700 dark:text-blue-300 text-[10px] uppercase tracking-wide mb-1">Výsledek hovoru:</p>
+    <div className="mt-0.5 rounded-md bg-accent-blue/10 dark:bg-blue-950/30 px-3 py-2 text-xs border border-accent-blue/30 dark:border-accent-blue/30">
+      <p className="font-semibold text-primary text-[10px] mb-1">Výsledek hovoru:</p>
       {!result && !loading && (
         <button
           onClick={async () => {
@@ -53,7 +53,7 @@ function CallResultBox({ viewingId, callId, initialSummary, initialTranscript }:
               if (r.ok) setResult(await r.json());
             } finally { setLoading(false); }
           }}
-          className="text-blue-600 underline text-xs"
+          className="text-accent-blue underline text-xs"
         >
           Načíst shrnutí a přepis
         </button>
@@ -64,11 +64,11 @@ function CallResultBox({ viewingId, callId, initialSummary, initialTranscript }:
           {result.summary && <p className="text-foreground">{result.summary}</p>}
           {result.transcript && (
             <>
-              <button onClick={() => setShowTranscript(v => !v)} className="text-blue-600 underline text-xs mt-1">
+              <button onClick={() => setShowTranscript(v => !v)} className="text-accent-blue underline text-xs mt-1">
                 {showTranscript ? "Skrýt přepis" : "Zobrazit přepis hovoru"}
               </button>
               {showTranscript && (
-                <pre className="mt-1 whitespace-pre-wrap text-muted-foreground font-sans text-[11px] leading-relaxed border-t border-blue-200 pt-1">
+                <pre className="mt-1 whitespace-pre-wrap text-muted-foreground font-sans text-[11px] leading-relaxed border-t border-accent-blue/30 pt-1">
                   {result.transcript}
                 </pre>
               )}
@@ -193,7 +193,7 @@ export default function HistoryPage() {
           </Button>
         </Link>
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-white">
             <History className="h-5 w-5" />
           </div>
           <div>
@@ -215,7 +215,7 @@ export default function HistoryPage() {
             const start = new Date(v.eventStart);
             const smsSent = v.sms2hSent || v.sms1hSent || v.status === "cancelled" || v.status === "confirmed";
             return (
-              <Card key={v.id} className="border-border/60 opacity-90 transition-shadow hover:shadow-lifted hover:opacity-100">
+              <Card key={v.id} className="border-border/60 opacity-90 transition-shadow hover:opacity-100">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-4">
                     <CardTitle className="text-base">Klient: {v.clientName || "—"}</CardTitle>
@@ -231,7 +231,7 @@ export default function HistoryPage() {
                   <p><span className="font-medium text-foreground">Čas:</span> {start.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" })}</p>
                   {v.clientPhone && <p><span className="font-medium text-foreground">Tel.:</span> {v.clientPhone}</p>}
                   {v.status === "confirmed" && (
-                    <p className="text-emerald-600 font-medium">
+                    <p className="text-emerald font-medium">
                       ✓ Potvrzeno po{" "}
                       {v.vapiCalled ? "hovoru" : v.sms1hSent ? "SMS 1h" : v.sms2hSent ? "SMS 2h" : "SMS"}
                     </p>
@@ -249,7 +249,7 @@ export default function HistoryPage() {
                   )}
                   {v.clientReply && (
                     <div className="mt-0.5 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground border border-border/60">
-                      <p className="font-semibold text-foreground/50 text-[10px] uppercase tracking-wide mb-1">Odpověď klienta:</p>
+                      <p className="font-semibold text-foreground/50 text-[10px] mb-1">Odpověď klienta:</p>
                       <p className="text-foreground">{v.clientReply}</p>
                     </div>
                   )}

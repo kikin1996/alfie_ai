@@ -150,7 +150,7 @@ function SubscriptionPageInner() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-navy text-white shadow-soft">
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground text-white">
           <CreditCard className="h-5 w-5" />
         </div>
         <div>
@@ -160,17 +160,17 @@ function SubscriptionPageInner() {
       </div>
 
       {successParam && (
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+        <div className="rounded-lg border border-emerald/30/30 bg-emerald-bg0/10 px-4 py-3 text-sm text-emerald dark:text-emerald">
           Platba proběhla úspěšně. Váš plán bude aktivován během pár sekund.
         </div>
       )}
       {cancelledParam && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+        <div className="rounded-lg border border-pending/30/30 bg-pending-bg0/10 px-4 py-3 text-sm text-pending dark:text-pending">
           Platba byla zrušena. Můžete to zkusit znovu kdykoliv.
         </div>
       )}
       {topupParam && (
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-700 dark:text-emerald-400">
+        <div className="rounded-lg border border-emerald/30/30 bg-emerald-bg0/10 px-4 py-3 text-sm text-emerald dark:text-emerald">
           Platba proběhla úspěšně. Kredity budou přičteny během pár sekund.
         </div>
       )}
@@ -216,7 +216,7 @@ function SubscriptionPageInner() {
       )}
 
       {error && (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive shadow-soft">
+        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
         </div>
       )}
@@ -238,10 +238,10 @@ function SubscriptionPageInner() {
                 return (
                   <div
                     key={pack.id}
-                    className={`relative flex flex-col rounded-2xl border p-4 transition-all hover:-translate-y-0.5 ${pack.popular ? "border-navy ring-2 ring-navy/15 shadow-lifted" : "border-border/60 shadow-xs"}`}
+                    className={`relative flex flex-col rounded-lg border p-4 transition-all hover:-translate-y-0.5 ${pack.popular ? "border-navy ring-2 ring-navy/15" : "border-border/60"}`}
                   >
                     {pack.popular && (
-                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-navy px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground shadow-soft">
+                      <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary text-primary-foreground px-2.5 py-0.5 text-[11px] font-medium text-primary-foreground">
                         Nejoblíbenější
                       </span>
                     )}
@@ -290,12 +290,12 @@ function SubscriptionPageInner() {
           return (
             <Card
               key={plan.id}
-              className={`relative flex flex-col transition-all hover:-translate-y-1 hover:shadow-lifted ${isCurrent ? "border-navy ring-2 ring-navy/20 shadow-lifted" : ""}`}
+              className={`relative flex flex-col transition-all hover:-translate-y-1 ${isCurrent ? "border-navy ring-2 ring-navy/20" : ""}`}
             >
               {/* Aktivní badge */}
               {isCurrent && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <span className="rounded-full bg-gradient-navy px-3 py-0.5 text-xs font-medium text-primary-foreground shadow-soft">
+                  <span className="rounded-full bg-primary text-primary-foreground px-3 py-0.5 text-xs font-medium text-primary-foreground">
                     Aktivní
                   </span>
                 </div>
@@ -303,7 +303,7 @@ function SubscriptionPageInner() {
               {/* Sleva badge (pouze ne-Starter plány) */}
               {!isCurrent && discount && (
                 <div className="absolute -top-3 right-4">
-                  <span className="rounded-full bg-emerald-500 px-3 py-0.5 text-xs font-medium text-white">
+                  <span className="rounded-full bg-emerald-bg0 px-3 py-0.5 text-xs font-medium text-white">
                     Ušetříte {discount} %
                   </span>
                 </div>
@@ -341,7 +341,7 @@ function SubscriptionPageInner() {
                 <ul className="space-y-2">
                   {features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald" />
                       {f}
                     </li>
                   ))}
