@@ -37,8 +37,12 @@ export default function PrivacyPage() {
             <h2 className="font-display text-xl font-semibold text-navy">1. Kdo jsme</h2>
             <p>
               Renote je aplikace pro realitní makléře, která automatizuje připomínky prohlídek
-              nemovitostí formou SMS a hlasových hovorů. Provozovatelem je{" "}
-              <strong>Renote</strong>, kontaktní e-mail:{" "}
+              nemovitostí formou SMS a hlasových hovorů. Provozovatelem a správcem osobních údajů je{" "}
+              <strong>Lazy Duck s.r.o.</strong>, IČO 23505842, se sídlem 28. října 810/246, Mariánské Hory,
+              709 00 Ostrava, zapsaná v obchodním rejstříku vedeném Krajským soudem v Ostravě, spisová značka C 100223.
+            </p>
+            <p>
+              Kontakt pro dotazy k ochraně osobních údajů:{" "}
               <a href="mailto:renote.mail.cz@gmail.com" className="text-accent-blue hover:underline">
                 renote.mail.cz@gmail.com
               </a>
@@ -107,9 +111,10 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-display text-xl font-semibold text-navy">5. Doba uchování dat</h2>
             <p>
-              Údaje o prohlídkách a související komunikaci uchováváme po dobu trvání účtu a
-              následně po omezenou dobu pro účetní a právní účely. Uživatel může kdykoliv
-              požádat o smazání účtu a souvisejících dat.
+              Údaje o prohlídkách (včetně telefonních čísel a adres klientů) automaticky mažeme
+              7 dní po termínu prohlídky. Údaje o účtu a nastavení uchováváme po dobu trvání účtu.
+              Po zrušení účtu je smažeme, s výjimkou údajů, které musíme uchovat ze zákona
+              (účetní a daňové doklady). Smazání účtu můžete kdykoliv požádat na kontaktním e-mailu níže.
             </p>
           </section>
 
@@ -130,7 +135,16 @@ export default function PrivacyPage() {
           </section>
 
           <section>
-            <h2 className="font-display text-xl font-semibold text-navy">7. Kontakt</h2>
+            <h2 className="font-display text-xl font-semibold text-navy">7. Vaše práva</h2>
+            <p>
+              Máte právo požádat o přístup ke svým údajům, o jejich opravu, výmaz nebo omezení
+              zpracování, právo na přenositelnost údajů a právo vznést námitku proti zpracování.
+              Máte také právo podat stížnost u Úřadu pro ochranu osobních údajů (www.uoou.cz).
+            </p>
+          </section>
+
+          <section>
+            <h2 className="font-display text-xl font-semibold text-navy">8. Kontakt</h2>
             <p>
               Dotazy ke zpracování osobních údajů směřujte na{" "}
               <a href="mailto:renote.mail.cz@gmail.com" className="text-accent-blue hover:underline">

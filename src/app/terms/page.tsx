@@ -40,6 +40,11 @@ export default function TermsPage() {
               prohlídek nemovitostí prostřednictvím SMS zpráv a hlasových hovorů, na základě
               událostí v jejich Google Kalendáři.
             </p>
+            <p>
+              Službu poskytuje <strong>Lazy Duck s.r.o.</strong>, IČO 23505842, se sídlem 28. října 810/246,
+              Mariánské Hory, 709 00 Ostrava, zapsaná v obchodním rejstříku vedeném Krajským soudem
+              v Ostravě, spisová značka C 100223.
+            </p>
           </section>
 
           <section>
