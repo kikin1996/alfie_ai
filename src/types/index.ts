@@ -20,6 +20,7 @@ export interface Viewing {
   status: ViewingStatus
   smsSentAt?: string
   confirmedAt?: string
+  initialSmsSent: boolean
   sms2hSent: boolean
   sms1hSent: boolean
   vapiCalled: boolean

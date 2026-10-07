@@ -600,6 +600,13 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
         <div className="pt-1">
           <div className="flex flex-wrap items-center gap-1">
             <NotifFlag
+              sent={viewing.initialSmsSent}
+              enabled={true}
+              label="SMS potvrzení"
+              onToggle={async () => {}}
+              disabled
+            />
+            <NotifFlag
               sent={viewing.sms2hSent}
               enabled={isDone ? false : viewing.sms2hEnabled}
               label="SMS 2h"
@@ -768,6 +775,7 @@ export default function DashboardPage() {
         status: r.status as Viewing["status"],
         smsSentAt: r.sms_sent_at as string | undefined,
         confirmedAt: r.confirmed_at as string | undefined,
+        initialSmsSent: (r.initial_sms_sent as boolean) ?? false,
         sms2hSent: (r.sms2h_sent as boolean) ?? false,
         sms1hSent: (r.sms1h_sent as boolean) ?? false,
         vapiCalled: (r.vapi_called as boolean) ?? false,

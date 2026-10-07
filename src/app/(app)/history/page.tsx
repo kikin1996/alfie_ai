@@ -141,6 +141,7 @@ export default function HistoryPage() {
         status: r.status as Viewing["status"],
         smsSentAt: r.sms_sent_at as string | undefined,
         confirmedAt: r.confirmed_at as string | undefined,
+        initialSmsSent: (r.initial_sms_sent as boolean) ?? false,
         sms2hSent: (r.sms2h_sent as boolean) ?? false,
         sms1hSent: (r.sms1h_sent as boolean) ?? false,
         vapiCalled: (r.vapi_called as boolean) ?? false,
