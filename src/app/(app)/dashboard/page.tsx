@@ -83,14 +83,19 @@ interface NotifFlagProps {
   label: string;
   onToggle: () => Promise<void>;
   disabled?: boolean;
+  onShowSent?: () => void;
 }
 
-function NotifFlag({ sent, enabled, label, onToggle, disabled }: NotifFlagProps) {
+function NotifFlag({ sent, enabled, label, onToggle, disabled, onShowSent }: NotifFlagProps) {
   const [localEnabled, setLocalEnabled] = useState(enabled);
   const [busy, setBusy] = useState(false);
 
   const handleClick = async () => {
-    if (sent || busy || disabled) return;
+    if (sent) {
+      onShowSent?.();
+      return;
+    }
+    if (busy || disabled) return;
     setBusy(true);
     const next = !localEnabled;
     setLocalEnabled(next);
@@ -104,7 +109,7 @@ function NotifFlag({ sent, enabled, label, onToggle, disabled }: NotifFlagProps)
   };
 
   const stateClasses = sent
-    ? "bg-emerald-bg text-emerald border-emerald/20 cursor-default"
+    ? `bg-emerald-bg text-emerald border-emerald/20 ${onShowSent ? "cursor-pointer hover:bg-emerald-bg/70" : "cursor-default"}`
     : disabled
     ? "bg-muted/40 text-muted-foreground/40 border-border/40 cursor-default opacity-50"
     : localEnabled
@@ -115,10 +120,12 @@ function NotifFlag({ sent, enabled, label, onToggle, disabled }: NotifFlagProps)
     <button
       type="button"
       onClick={handleClick}
-      disabled={sent || busy}
+      disabled={busy || (sent && !onShowSent)}
       title={
         sent
-          ? "Odesláno"
+          ? onShowSent
+            ? "Klikněte pro zobrazení textu"
+            : "Odesláno"
           : localEnabled
           ? "Klikněte pro vypnutí"
           : "Klikněte pro zapnutí"
@@ -294,6 +301,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
   );
   const [loadingCall, setLoadingCall] = useState(false);
   const [showTranscript, setShowTranscript] = useState(false);
+  const [smsLogOpen, setSmsLogOpen] = useState<string | null>(null);
 
   const saveEdit = async () => {
     setSaving(true);
@@ -605,6 +613,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               label="SMS potvrzení"
               onToggle={async () => {}}
               disabled
+              onShowSent={() => setSmsLogOpen((t) => (t === "initial" ? null : "initial"))}
             />
             <NotifFlag
               sent={viewing.sms2hSent}
@@ -612,6 +621,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               label="SMS 2h"
               onToggle={() => toggleBuiltIn("sms2h_enabled", "sms2hEnabled")}
               disabled={isDone}
+              onShowSent={() => setSmsLogOpen((t) => (t === "sms2h" ? null : "sms2h"))}
             />
             <NotifFlag
               sent={viewing.sms1hSent}
@@ -619,6 +629,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               label="SMS 1h"
               onToggle={() => toggleBuiltIn("sms1h_enabled", "sms1hEnabled")}
               disabled={isDone}
+              onShowSent={() => setSmsLogOpen((t) => (t === "sms1h" ? null : "sms1h"))}
             />
             <NotifFlag
               sent={viewing.vapiCalled}
@@ -636,6 +647,11 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
                   enabled={notif.enabled}
                   label={notif.label}
                   onToggle={() => handleToggleExtra(notif.id)}
+                  onShowSent={
+                    notif.type === "sms"
+                      ? () => setSmsLogOpen((t) => (t === notif.label ? null : notif.label))
+                      : undefined
+                  }
                 />
                 {!notif.sent && (
                   <button
@@ -662,6 +678,36 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               </button>
             )}
           </div>
+
+          {smsLogOpen && (() => {
+            const entry = viewing.smsLog?.find((l) => l.type === smsLogOpen);
+            return (
+              <div className="mt-2 rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-medium text-foreground">Odeslaný text</span>
+                  <button
+                    type="button"
+                    onClick={() => setSmsLogOpen(null)}
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+                {entry ? (
+                  <>
+                    <p className="mt-1.5 whitespace-pre-wrap text-foreground">{entry.text}</p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">
+                      Odesláno {new Date(entry.sentAt).toLocaleString("cs-CZ", { timeZone: "Europe/Prague" })}
+                    </p>
+                  </>
+                ) : (
+                  <p className="mt-1.5 text-muted-foreground">
+                    Text není uložený – tahle SMS byla odeslána ještě před zavedením záznamu textů.
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           {addingNotif && (
             <AddNotifPanel
@@ -787,6 +833,7 @@ export default function DashboardPage() {
         sms1hEnabled: (r.sms1h_enabled as boolean) ?? true,
         vapiEnabled: (r.vapi_enabled as boolean) ?? true,
         extraNotifications: (r.extra_notifications as ExtraNotification[]) ?? [],
+        smsLog: (r.sms_log as Viewing["smsLog"]) ?? [],
         createdAt: r.created_at as string,
         updatedAt: r.updated_at as string,
         userId: r.user_id as string,

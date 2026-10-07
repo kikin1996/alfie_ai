@@ -153,6 +153,7 @@ export default function HistoryPage() {
         sms1hEnabled: (r.sms1h_enabled as boolean) ?? true,
         vapiEnabled: (r.vapi_enabled as boolean) ?? true,
         extraNotifications: [],
+        smsLog: (r.sms_log as Viewing["smsLog"]) ?? [],
         createdAt: r.created_at as string,
         updatedAt: r.updated_at as string,
         userId: r.user_id as string,

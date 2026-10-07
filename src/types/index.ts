@@ -9,6 +9,12 @@ export interface ExtraNotification {
   enabled: boolean
 }
 
+export interface SmsLogEntry {
+  type: string
+  text: string
+  sentAt: string
+}
+
 export interface Viewing {
   id: string
   calendarEventId: string
@@ -32,6 +38,7 @@ export interface Viewing {
   sms1hEnabled: boolean
   vapiEnabled: boolean
   extraNotifications: ExtraNotification[]
+  smsLog: SmsLogEntry[]
   createdAt: string
   updatedAt: string
   userId: string

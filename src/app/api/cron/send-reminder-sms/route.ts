@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
 
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
-    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status, initial_sms_sent")
+    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status, initial_sms_sent, sms_log")
     .not("status", "in", '("confirmed","cancelled")')
     .gte("event_start", new Date().toISOString());
 
@@ -195,6 +195,7 @@ export async function GET(request: NextRequest) {
     sms1h_enabled: boolean; vapi_enabled: boolean;
     extra_notifications: ExtraNotification[]; status: string;
     initial_sms_sent: boolean;
+    sms_log: { type: string; text: string; sentAt: string }[] | null;
   }[]) {
     const userSettings = settingsByUser.get(v.user_id);
 
@@ -225,6 +226,7 @@ export async function GET(request: NextRequest) {
           const body = withCode(fillTemplate(initialTemplate, v.address, timeStr, name, brokerName, brokerPhone, agencyName, dateStr), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
+            await supabaseAdmin.from("viewings").update({ sms_log: [...(v.sms_log ?? []), { type: "initial", text: body, sentAt: now.toISOString() }] }).eq("id", v.id);
             if (userSettings) await notify(userSettings, `Úvodní SMS odeslána – ${name}`, `📨 Úvodní SMS odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n📅 ${dateStr} ${timeStr}`);
             actions++;
           } else {
@@ -262,7 +264,7 @@ export async function GET(request: NextRequest) {
           const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
-            await supabaseAdmin.from("viewings").update({ status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
+            await supabaseAdmin.from("viewings").update({ status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString(), sms_log: [...(v.sms_log ?? []), { type: "sms2h", text: body, sentAt: now.toISOString() }] }).eq("id", v.id);
             if (userSettings) await notify(userSettings, `SMS 2h odeslána – ${name}`, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           } else {
@@ -291,6 +293,7 @@ export async function GET(request: NextRequest) {
           const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
+            await supabaseAdmin.from("viewings").update({ sms_log: [...(v.sms_log ?? []), { type: "sms1h", text: body, sentAt: now.toISOString() }] }).eq("id", v.id);
             if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           } else {
@@ -340,6 +343,7 @@ export async function GET(request: NextRequest) {
     const extras: ExtraNotification[] = v.extra_notifications ?? [];
     let extrasUpdated = false;
     const updatedExtras = [...extras];
+    const extraLogEntries: { type: string; text: string; sentAt: string }[] = [];
 
     for (let i = 0; i < updatedExtras.length; i++) {
       const notif = updatedExtras[i];
@@ -355,6 +359,7 @@ export async function GET(request: NextRequest) {
           if (sent) {
             updatedExtras[i] = { ...notif, sent: true };
             extrasUpdated = true;
+            extraLogEntries.push({ type: notif.label, text: body, sentAt: now.toISOString() });
             if (userSettings) await notify(userSettings, `${notif.label} odeslána – ${name}`, `📨 ${notif.label} odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           }
@@ -375,7 +380,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (extrasUpdated) {
-      await supabaseAdmin.from("viewings").update({ extra_notifications: updatedExtras, updated_at: now.toISOString() }).eq("id", v.id);
+      await supabaseAdmin.from("viewings").update({ extra_notifications: updatedExtras, updated_at: now.toISOString(), sms_log: [...(v.sms_log ?? []), ...extraLogEntries] }).eq("id", v.id);
     }
   }
 
