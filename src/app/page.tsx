@@ -61,6 +61,10 @@ export default async function HomePage() {
             <Image src="/logo.png" alt="Renote" width={44} height={44} className="h-11 w-11" priority />
             <span className="font-display text-2xl font-medium text-foreground">Renote</span>
           </Link>
+          <nav className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
+            <a href="#jak-to-funguje" className="hover:text-foreground transition-colors">Jak to funguje</a>
+            <a href="#funkce" className="hover:text-foreground transition-colors">Funkce</a>
+          </nav>
           <nav className="flex items-center gap-3">
             <NavbarAuth />
           </nav>
@@ -69,12 +73,13 @@ export default async function HomePage() {
 
       <section className="container grid items-center gap-16 py-20 lg:grid-cols-[1.1fr_1fr] lg:py-28">
         <div>
-          <h1 className="font-display text-5xl font-medium leading-[1.05] tracking-tight text-foreground sm:text-6xl">
-            Klient dostane připomínku. Vy si na ni nemusíte vzpomenout.
+          <p className="text-base font-medium text-primary">Software pro realitní makléře</p>
+          <h1 className="mt-3 font-display text-5xl font-medium leading-[1.05] tracking-tight text-foreground sm:text-6xl">
+            Klienti dostanou připomínku prohlídky. Vy na ni nemusíte myslet.
           </h1>
           <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Renote propojí váš Google Kalendář s SMS a AI hovory. Připomínky odejdou
-            ve správný čas a vy vidíte, které prohlídky klienti potvrdili.
+            Renote hlídá váš Google Kalendář a sám posílá klientům SMS i telefonické
+            připomínky před každou prohlídkou nemovitosti. Vy v přehledu vidíte, kdo potvrdil.
           </p>
           <div className="mt-10 flex flex-col gap-4 sm:flex-row sm:items-center">
             <Link
@@ -113,10 +118,41 @@ export default async function HomePage() {
         </figure>
       </section>
 
-      <section className="border-t border-border py-20">
+      <section id="jak-to-funguje" className="border-t border-border py-20">
+        <div className="container">
+          <h2 className="font-display text-3xl font-medium tracking-tight">Jak to funguje</h2>
+          <ol className="mt-10 grid gap-10 sm:grid-cols-3">
+            {[
+              {
+                n: "1",
+                title: "Zapíšete prohlídku do kalendáře",
+                desc: "Do události v Google Kalendáři přidáte adresu a telefon klienta. Renote si ji každý večer sám načte.",
+              },
+              {
+                n: "2",
+                title: "Renote pošle připomínky",
+                desc: "Klientovi odejde SMS dvě a jednu hodinu předem, volitelně i AI hovor 30 minut před prohlídkou.",
+              },
+              {
+                n: "3",
+                title: "Vidíte, kdo potvrdil",
+                desc: "AI vyhodnotí odpověď klienta a stav prohlídky se v dashboardu aktualizuje sám.",
+              },
+            ].map((step) => (
+              <li key={step.n}>
+                <span className="font-display text-sm text-primary">Krok {step.n}</span>
+                <h3 className="mt-2 text-lg font-medium text-foreground">{step.title}</h3>
+                <p className="mt-2 text-muted-foreground">{step.desc}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section id="funkce" className="border-t border-border py-20">
         <div className="container grid gap-12 lg:grid-cols-[1fr_2fr]">
           <div>
-            <h2 className="font-display text-3xl font-medium tracking-tight">Co Renote dělá</h2>
+            <h2 className="font-display text-3xl font-medium tracking-tight">Co všechno Renote umí</h2>
             <p className="mt-3 max-w-sm text-muted-foreground">
               Celý postup od zapsání prohlídky po potvrzení klientem bez ruční práce.
             </p>
