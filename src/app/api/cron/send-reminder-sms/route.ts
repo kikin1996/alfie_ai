@@ -116,14 +116,36 @@ export async function GET(request: NextRequest) {
   const hasVapi = appConfig?.vapi_api_key && appConfig?.vapi_assistant_id && appConfig?.vapi_phone_number_id;
   const vapiMinutesBefore: number = appConfig?.vapi_minutes_before ?? 30;
 
-  const { data: viewings } = await supabaseAdmin
+  // POZOR: sms_log je zde záměrně vynechaný ze základního dotazu. Je to nový
+  // sloupec, který může chybět, dokud se nespustí příslušná migrace – kdyby
+  // byl součástí tohoto selectu, chybějící sloupec by shodil CELÝ dotaz a cron
+  // by tiše neudělal nic (viz incident 2026-10-10). Načítá se zvlášť níž, tolerantně.
+  const { data: viewings, error: viewingsError } = await supabaseAdmin
     .from("viewings")
-    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status, initial_sms_sent, sms_log")
+    .select("id, user_id, address, client_phone, client_name, event_start, sms2h_sent, sms1h_sent, vapi_called, sms2h_enabled, sms1h_enabled, vapi_enabled, extra_notifications, status, initial_sms_sent")
     .not("status", "in", '("confirmed","cancelled")')
     .gte("event_start", new Date().toISOString());
 
+  if (viewingsError) {
+    console.error("send-reminder-sms: selhal dotaz na viewings", viewingsError);
+    return NextResponse.json({ ok: false, error: viewingsError.message }, { status: 500 });
+  }
+
   if (!viewings?.length) {
     return NextResponse.json({ ok: true, actions: 0 });
+  }
+
+  // Tolerantní dotaz na sms_log – stejný vzor jako u notification_window_enabled níž.
+  // Pokud sloupec/migrace chybí, prostě dostaneme prázdné logy a cron jede dál.
+  const smsLogById = new Map<string, { type: string; text: string; sentAt: string }[]>();
+  {
+    const { data: logRows } = await supabaseAdmin
+      .from("viewings")
+      .select("id, sms_log")
+      .in("id", viewings.map((v) => v.id));
+    for (const row of (logRows ?? []) as { id: string; sms_log: { type: string; text: string; sentAt: string }[] | null }[]) {
+      smsLogById.set(row.id, row.sms_log ?? []);
+    }
   }
 
   // Načíst Telegram + SMS šablonu per-user
@@ -195,9 +217,9 @@ export async function GET(request: NextRequest) {
     sms1h_enabled: boolean; vapi_enabled: boolean;
     extra_notifications: ExtraNotification[]; status: string;
     initial_sms_sent: boolean;
-    sms_log: { type: string; text: string; sentAt: string }[] | null;
   }[]) {
     const userSettings = settingsByUser.get(v.user_id);
+    const smsLog = smsLogById.get(v.id) ?? [];
 
     const eventStart = new Date(v.event_start);
     const timeStr = eventStart.toLocaleTimeString("cs-CZ", { timeZone: "Europe/Prague", hour: "2-digit", minute: "2-digit" });
@@ -226,7 +248,7 @@ export async function GET(request: NextRequest) {
           const body = withCode(fillTemplate(initialTemplate, v.address, timeStr, name, brokerName, brokerPhone, agencyName, dateStr), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
-            await supabaseAdmin.from("viewings").update({ sms_log: [...(v.sms_log ?? []), { type: "initial", text: body, sentAt: now.toISOString() }] }).eq("id", v.id);
+            await supabaseAdmin.from("viewings").update({ sms_log: [...smsLog, { type: "initial", text: body, sentAt: now.toISOString() }] }).eq("id", v.id).then(({ error }) => { if (error) console.error("sms_log update failed", error); });
             if (userSettings) await notify(userSettings, `Úvodní SMS odeslána – ${name}`, `📨 Úvodní SMS odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n📅 ${dateStr} ${timeStr}`);
             actions++;
           } else {
@@ -264,7 +286,9 @@ export async function GET(request: NextRequest) {
           const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
-            await supabaseAdmin.from("viewings").update({ status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString(), sms_log: [...(v.sms_log ?? []), { type: "sms2h", text: body, sentAt: now.toISOString() }] }).eq("id", v.id);
+            // Kritický update (status) odděleně od sms_log – ať případná chyba na sms_log nikdy nesmaže zápis stavu.
+            await supabaseAdmin.from("viewings").update({ status: "sms_sent", sms_sent_at: now.toISOString(), updated_at: now.toISOString() }).eq("id", v.id);
+            await supabaseAdmin.from("viewings").update({ sms_log: [...smsLog, { type: "sms2h", text: body, sentAt: now.toISOString() }] }).eq("id", v.id).then(({ error }) => { if (error) console.error("sms_log update failed", error); });
             if (userSettings) await notify(userSettings, `SMS 2h odeslána – ${name}`, `📨 SMS 2h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           } else {
@@ -293,7 +317,7 @@ export async function GET(request: NextRequest) {
           const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
-            await supabaseAdmin.from("viewings").update({ sms_log: [...(v.sms_log ?? []), { type: "sms1h", text: body, sentAt: now.toISOString() }] }).eq("id", v.id);
+            await supabaseAdmin.from("viewings").update({ sms_log: [...smsLog, { type: "sms1h", text: body, sentAt: now.toISOString() }] }).eq("id", v.id).then(({ error }) => { if (error) console.error("sms_log update failed", error); });
             if (userSettings) await notify(userSettings, `SMS 1h odeslána – ${name}`, `📨 SMS 1h odeslána: ${name} (${v.client_phone})\n🔖 ID: ${code}\n📍 ${v.address}\n🕐 ${timeStr}`);
             actions++;
           } else {
@@ -380,7 +404,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (extrasUpdated) {
-      await supabaseAdmin.from("viewings").update({ extra_notifications: updatedExtras, updated_at: now.toISOString(), sms_log: [...(v.sms_log ?? []), ...extraLogEntries] }).eq("id", v.id);
+      await supabaseAdmin.from("viewings").update({ extra_notifications: updatedExtras, updated_at: now.toISOString() }).eq("id", v.id);
+      if (extraLogEntries.length > 0) {
+        await supabaseAdmin.from("viewings").update({ sms_log: [...smsLog, ...extraLogEntries] }).eq("id", v.id).then(({ error }) => { if (error) console.error("sms_log update failed", error); });
+      }
     }
   }
 
