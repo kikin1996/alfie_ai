@@ -60,7 +60,7 @@ Aby aplikace našla prohlídky a vytáhla telefon a adresu, používej v popisu/
 - **Přihlášení:** Google OAuth přes Supabase Auth.
 - **Nastavení:** klíčové slovo, Twilio údaje, šablona SMS, počet hodin před prohlídkou (např. odeslat 2 h před).
 - **Dashboard:** seznam nadcházejících a minulých prohlídek se stavy: Čeká, SMS odeslána, Potvrzeno, Zrušeno.
-- **Synchronizace kalendáře (bez N8N):** cron volá `GET /api/cron/sync-calendar` každých 15 min (Vercel Cron). Načte události z Google Calendar (uživatelé s vyplněným `google_refresh_token` v DB), parsuje Tel/Adresa a zapisuje do `viewings`.
+- **Synchronizace kalendáře (bez N8N):** cron volá `GET /api/cron/sync-calendar` jednou denně v 17:00 (cron-job.org, časové pásmo Europe/Prague). Načte události z Google Calendar (uživatelé s vyplněným `google_refresh_token` v DB), parsuje Tel/Adresa a zapisuje do `viewings`.
 - **SMS připomínky:** cron volá `GET /api/cron/send-reminder-sms` každých 5 minut (cron-job.org). Pro prohlídky, které jsou za X hodin (nastavení uživatele) a mají status `pending`, odešle SMS přes Twilio a nastaví `sms_sent`.
 - **Úvodní SMS po založení prohlídky:** stejný cron (`send-reminder-sms`) navíc při každém běhu najde prohlídky do 3 týdnů dopředu, které ještě nemají odeslanou úvodní SMS (`initial_sms_sent = false`), a pošle klientovi adresu, datum a čas.
 - **Odpovědi klienta (YES/NO):** Twilio při příchozí SMS zavolá `POST /api/webhooks/twilio`. Aplikace najde prohlídku podle čísla, změní status na `confirmed` nebo `cancelled`.
