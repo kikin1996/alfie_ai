@@ -228,7 +228,7 @@ export async function GET(request: NextRequest) {
     const code = shortCode(v.id);
     const agencyName = userSettings?.agency_name ?? "";
     const template = userSettings?.sms_template ??
-      "Dobrý den, prosím o potvrzení dnešní prohlídky na adrese {address} v {time}.";
+      "Dobrý den, prosím o potvrzení prohlídky dne {date} v {time} na adrese {address}.";
     const brokerName = userSettings?.broker_name ?? "";
     const brokerPhone = userSettings?.broker_phone ?? "";
 
@@ -283,7 +283,7 @@ export async function GET(request: NextRequest) {
       if (claimed && claimed.length > 0) {
         const hasCredits = await deductCredits(v.user_id, 1);
         if (hasCredits) {
-          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
+          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName, dateStr), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
             // Kritický update (status) odděleně od sms_log – ať případná chyba na sms_log nikdy nesmaže zápis stavu.
@@ -314,7 +314,7 @@ export async function GET(request: NextRequest) {
       if (claimed && claimed.length > 0) {
         const hasCredits = await deductCredits(v.user_id, 1);
         if (hasCredits) {
-          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
+          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName, dateStr), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
             await supabaseAdmin.from("viewings").update({ sms_log: [...smsLog, { type: "sms1h", text: body, sentAt: now.toISOString() }] }).eq("id", v.id).then(({ error }) => { if (error) console.error("sms_log update failed", error); });
@@ -378,7 +378,7 @@ export async function GET(request: NextRequest) {
       if (notif.type === "sms" && hasSms) {
         const hasCredits = await deductCredits(v.user_id, 1);
         if (hasCredits) {
-          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName), code);
+          const body = withCode(fillTemplate(template, v.address, timeStr, name, brokerName, brokerPhone, agencyName, dateStr), code);
           const sent = await sendSms(appConfig.smsbrana_login, appConfig.smsbrana_password, v.client_phone, body).catch(() => false);
           if (sent) {
             updatedExtras[i] = { ...notif, sent: true };
