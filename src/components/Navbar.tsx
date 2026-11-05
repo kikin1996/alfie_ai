@@ -3,13 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Settings, LayoutDashboard, LogOut, ShieldCheck, Coins, CreditCard, Phone } from "lucide-react";
+import { Settings, LayoutDashboard, LogOut, ShieldCheck, Coins, CreditCard, Phone, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "Správa", icon: Building2, path: "/projects" },
   { label: "Předplatné", icon: CreditCard, path: "/subscription" },
   { label: "Nastavení", icon: Settings, path: "/settings" },
 ];
@@ -50,7 +51,7 @@ export default function Navbar() {
         <div className="flex items-center gap-2">
         <nav className="flex items-center gap-6">
           {navItems.map((item) => {
-            const isActive = pathname === item.path;
+            const isActive = pathname === item.path || pathname?.startsWith(`${item.path}/`);
             const isSubscription = item.path === "/subscription";
             const lowCredits = credits !== null && credits < 5;
             const medCredits = credits !== null && credits >= 5 && credits < 15;

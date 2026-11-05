@@ -17,10 +17,13 @@ export interface SmsLogEntry {
 
 export interface Viewing {
   id: string
-  calendarEventId: string
+  calendarEventId?: string
+  projectId?: string
   address: string
   clientPhone: string
   clientName: string
+  clientEmail?: string
+  clientMessage?: string
   eventStart: string
   eventEnd?: string
   status: ViewingStatus
@@ -78,6 +81,15 @@ export interface UserSubscription {
   periodStart: string
   periodEnd: string
   status: "active" | "cancelled" | "expired"
+  createdAt: string
+  updatedAt: string
+}
+
+export interface PropertyProject {
+  id: string
+  userId: string
+  name: string
+  address: string
   createdAt: string
   updatedAt: string
 }

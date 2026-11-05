@@ -68,8 +68,8 @@ export default function PrivacyPage() {
             </p>
             <ul className="list-disc pl-6 space-y-1">
               <li>
-                <strong>Google Kalendář</strong> (rozsah <code>calendar.events</code>) – čtení
-                a čas od času úprava událostí označených jako prohlídka, aby mohla aplikace
+                <strong>Google Kalendář</strong> (rozsah <code>calendar.events</code>) – čtení,
+                vytváření a úprava událostí označených jako prohlídka, aby mohla aplikace
                 naplánovat SMS a hovory.
               </li>
               <li>

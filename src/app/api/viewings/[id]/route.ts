@@ -16,10 +16,12 @@ export async function PATCH(
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
 
-  const { address, clientName, clientPhone, eventStart, status } = body as {
+  const { address, clientName, clientPhone, clientEmail, message, eventStart, status } = body as {
     address?: string;
     clientName?: string;
     clientPhone?: string;
+    clientEmail?: string;
+    message?: string;
     eventStart?: string; // ISO nebo "YYYY-MM-DDTHH:mm" z datetime-local inputu
     status?: string; // "cancelled" | "confirmed" – měkké zrušení/potvrzení (zůstane v historii)
   };
@@ -48,6 +50,8 @@ export async function PATCH(
   if (address !== undefined) updates.address = address;
   if (clientName !== undefined) updates.client_name = clientName;
   if (clientPhone !== undefined) updates.client_phone = clientPhone;
+  if (clientEmail !== undefined) updates.client_email = clientEmail;
+  if (message !== undefined) updates.client_message = message;
   if (status === "cancelled" || status === "confirmed") {
     updates.status = status;
     if (status === "confirmed") updates.confirmed_at = new Date().toISOString();
