@@ -15,7 +15,7 @@ export async function GET(
 
   const { data: project } = await supabase
     .from("property_projects")
-    .select("id, name, address, created_at, updated_at")
+    .select("id, name, address, listing_type, listing_url, description, archived_at, created_at, updated_at")
     .eq("id", params.id)
     .eq("user_id", session.user.id)
     .maybeSingle();
@@ -24,12 +24,28 @@ export async function GET(
 
   const { data: viewings } = await supabase
     .from("viewings")
-    .select("id, calendar_event_id, address, client_phone, client_name, client_email, client_message, event_start, event_end, status, sms2h_sent, sms1h_sent, vapi_called, initial_sms_sent, created_at")
+    .select("id, calendar_event_id, address, client_phone, client_name, client_email, client_message, event_start, event_end, status, sms2h_sent, sms1h_sent, vapi_called, initial_sms_sent, reaction, post_viewing_sms_sent, created_at")
     .eq("project_id", params.id)
     .order("event_start", { ascending: true });
 
+  const { data: documents } = await supabase
+    .from("project_documents")
+    .select("id, type, file_name, created_at")
+    .eq("project_id", params.id)
+    .order("created_at", { ascending: false });
+
   return NextResponse.json({
-    project: { id: project.id, name: project.name, address: project.address, createdAt: project.created_at, updatedAt: project.updated_at },
+    project: {
+      id: project.id,
+      name: project.name,
+      address: project.address,
+      listingType: project.listing_type,
+      listingUrl: project.listing_url,
+      description: project.description,
+      archivedAt: project.archived_at,
+      createdAt: project.created_at,
+      updatedAt: project.updated_at,
+    },
     leads: (viewings ?? []).map((v) => ({
       id: v.id,
       calendarEventId: v.calendar_event_id,
@@ -45,7 +61,15 @@ export async function GET(
       sms1hSent: v.sms1h_sent,
       vapiCalled: v.vapi_called,
       initialSmsSent: v.initial_sms_sent,
+      reaction: v.reaction,
+      postViewingSmsSent: v.post_viewing_sms_sent,
       createdAt: v.created_at,
+    })),
+    documents: (documents ?? []).map((d) => ({
+      id: d.id,
+      type: d.type,
+      fileName: d.file_name,
+      createdAt: d.created_at,
     })),
   });
 }
@@ -62,11 +86,27 @@ export async function PATCH(
 
   const body = await request.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  const { name, address } = body as { name?: string; address?: string };
+  const { name, address, listingType, listingUrl, description, archived } = body as {
+    name?: string;
+    address?: string;
+    listingType?: string | null;
+    listingUrl?: string | null;
+    description?: string | null;
+    archived?: boolean;
+  };
 
-  const updates: Record<string, string> = {};
+  const updates: Record<string, string | null> = {};
   if (name !== undefined) updates.name = name.trim();
   if (address !== undefined) updates.address = address.trim();
+  if (listingType !== undefined) {
+    if (listingType !== null && listingType !== "sale" && listingType !== "rent") {
+      return NextResponse.json({ error: "Neplatný typ nabídky" }, { status: 400 });
+    }
+    updates.listing_type = listingType;
+  }
+  if (listingUrl !== undefined) updates.listing_url = listingUrl?.trim() || null;
+  if (description !== undefined) updates.description = description?.trim() || null;
+  if (archived !== undefined) updates.archived_at = archived ? new Date().toISOString() : null;
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: "No fields to update" }, { status: 400 });
   }
@@ -77,7 +117,7 @@ export async function PATCH(
     .update(updates)
     .eq("id", params.id)
     .eq("user_id", session.user.id)
-    .select("id, name, address, updated_at")
+    .select("id, name, address, listing_type, listing_url, description, archived_at, updated_at")
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

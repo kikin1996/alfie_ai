@@ -3,37 +3,46 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Plus, Building2, Users } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
+type ListingType = "sale" | "rent";
+
 interface ProjectListItem {
   id: string;
   name: string;
   address: string;
+  listingType?: ListingType | null;
   leadsCount: number;
 }
 
+const listingLabels: Record<ListingType, string> = { sale: "Prodej", rent: "Pronájem" };
+
 export default function ProjectsPage() {
   const { user, loading: authLoading } = useAuth();
+  const [tab, setTab] = useState<"active" | "archived">("active");
   const [projects, setProjects] = useState<ProjectListItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [listingType, setListingType] = useState<ListingType | "">("");
 
-  const load = async () => {
-    const res = await fetch("/api/projects");
+  const load = async (which: "active" | "archived") => {
+    setProjects(null);
+    const res = await fetch(`/api/projects${which === "archived" ? "?archived=1" : ""}`);
     const data = await res.json().catch(() => null);
     if (!res.ok) { setError(data?.error ?? "Nepodařilo se načíst projekty"); return; }
     setProjects(data.projects);
   };
 
   useEffect(() => {
-    if (!authLoading && user) load();
-  }, [authLoading, user]);
+    if (!authLoading && user) load(tab);
+  }, [authLoading, user, tab]);
 
   const createProject = async () => {
     if (!name.trim() || !address.trim()) return;
@@ -43,12 +52,12 @@ export default function ProjectsPage() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address }),
+        body: JSON.stringify({ name, address, listingType: listingType || undefined }),
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) { setError(data?.error ?? "Nepodařilo se vytvořit projekt"); return; }
-      setName(""); setAddress(""); setAdding(false);
-      await load();
+      setName(""); setAddress(""); setListingType(""); setAdding(false);
+      await load(tab);
     } finally {
       setSaving(false);
     }
@@ -67,6 +76,11 @@ export default function ProjectsPage() {
         </Button>
       </div>
 
+      <div className="flex gap-2">
+        <Button size="sm" variant={tab === "active" ? "default" : "ghost"} onClick={() => setTab("active")}>Aktivní</Button>
+        <Button size="sm" variant={tab === "archived" ? "default" : "ghost"} onClick={() => setTab("archived")}>Archiv</Button>
+      </div>
+
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {adding && (
@@ -75,6 +89,10 @@ export default function ProjectsPage() {
           <CardContent className="space-y-3">
             <Input placeholder="Název (např. Byt 2+kk Vinohrady)" value={name} onChange={(e) => setName(e.target.value)} />
             <Input placeholder="Adresa nemovitosti" value={address} onChange={(e) => setAddress(e.target.value)} />
+            <div className="flex gap-2">
+              <Button size="sm" variant={listingType === "sale" ? "default" : "outline"} onClick={() => setListingType("sale")}>Prodej</Button>
+              <Button size="sm" variant={listingType === "rent" ? "default" : "outline"} onClick={() => setListingType("rent")}>Pronájem</Button>
+            </div>
             <div className="flex gap-2">
               <Button size="sm" disabled={saving} onClick={createProject}>
                 {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Vytvořit"}
@@ -86,7 +104,9 @@ export default function ProjectsPage() {
       )}
 
       {projects.length === 0 && !adding && (
-        <p className="text-sm text-muted-foreground">Zatím žádné projekty. Vytvoř první nemovitost tlačítkem výše.</p>
+        <p className="text-sm text-muted-foreground">
+          {tab === "active" ? "Zatím žádné projekty. Vytvoř první nemovitost tlačítkem výše." : "Archiv je prázdný."}
+        </p>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -96,6 +116,7 @@ export default function ProjectsPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <Building2 className="h-4 w-4 text-muted-foreground" /> {p.name}
+                  {p.listingType && <Badge variant="outline">{listingLabels[p.listingType]}</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-1.5">

@@ -24,6 +24,8 @@ export interface Viewing {
   clientName: string
   clientEmail?: string
   clientMessage?: string
+  reaction?: LeadReaction | null
+  postViewingSmsSent?: boolean
   eventStart: string
   eventEnd?: string
   status: ViewingStatus
@@ -85,13 +87,28 @@ export interface UserSubscription {
   updatedAt: string
 }
 
+export type ListingType = "sale" | "rent"
+export type LeadReaction = "interested" | "not_interested"
+
 export interface PropertyProject {
   id: string
   userId: string
   name: string
   address: string
+  listingType?: ListingType | null
+  listingUrl?: string | null
+  description?: string | null
+  archivedAt?: string | null
   createdAt: string
   updatedAt: string
+}
+
+export interface ProjectDocument {
+  id: string
+  projectId: string
+  type: "purchase_contract" | "rental_contract" | "other"
+  fileName: string
+  createdAt: string
 }
 
 export interface ParsedCalendarEvent {
