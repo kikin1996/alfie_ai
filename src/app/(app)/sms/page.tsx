@@ -54,12 +54,18 @@ export default function SmsHistoryPage() {
     if (from) params.set("from", from);
     if (to) params.set("to", to);
     if (q) params.set("q", q);
-    const res = await fetch(`/api/sms-log?${params.toString()}`);
-    const data = await res.json().catch(() => null);
-    if (!res.ok) { setError(data?.error ?? "Nepodařilo se načíst historii"); return; }
-    setHistory(data.history);
-    setPending(data.pending);
-    setProjects(data.projects);
+    try {
+      const res = await fetch(`/api/sms-log?${params.toString()}`);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) { setError(data?.error ?? "Nepodařilo se načíst historii"); setHistory([]); return; }
+      setError(null);
+      setHistory(data.history);
+      setPending(data.pending);
+      setProjects(data.projects);
+    } catch {
+      setError("Nepodařilo se spojit se serverem");
+      setHistory([]);
+    }
   };
 
   useEffect(() => {
