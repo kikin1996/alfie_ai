@@ -311,7 +311,7 @@ export default function ProjectDetailPage() {
             <Textarea placeholder="Zpráva / poznámka od zájemce (nepovinné)" value={message} onChange={(e) => setMessage(e.target.value)} />
             <div>
               <label className="mb-1 block text-xs text-muted-foreground">Datum a čas prohlídky</label>
-              <Input type="datetime-local" value={eventStart} onChange={(e) => setEventStart(e.target.value)} />
+              <Input type="datetime-local" step={300} value={eventStart} onChange={(e) => setEventStart(e.target.value)} />
             </div>
             <div className="flex gap-2">
               <Button size="sm" disabled={saving} onClick={createLead}>

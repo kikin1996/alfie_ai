@@ -510,6 +510,7 @@ function ViewingCard({ viewing: initial, isAdmin, isPast, smsSettings }: {
               <label className="text-[11px] text-muted-foreground">Datum a čas prohlídky</label>
               <Input
                 type="datetime-local"
+                step={300}
                 value={editFields.eventStart}
                 onChange={(e) => setEditFields((f) => ({ ...f, eventStart: e.target.value }))}
                 className="h-7 text-sm"
