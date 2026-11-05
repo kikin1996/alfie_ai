@@ -4,6 +4,7 @@ import { sendSms } from "@/lib/smsbrana";
 import { notify } from "@/lib/notify";
 import { initiateVapiCall } from "@/lib/vapi";
 import { shortCode, withCode } from "@/lib/shortCode";
+import { toVocative } from "@/lib/czechVocative";
 import type { ExtraNotification } from "@/types";
 
 function checkCronAuth(request: NextRequest): boolean {
@@ -81,6 +82,7 @@ function fillTemplate(template: string, address: string, time: string, clientNam
     .replace(/\{address\}/g, address)
     .replace(/\{time\}/g, time)
     .replace(/\{date\}/g, date)
+    .replace(/\{clientNameVocative\}/g, toVocative(clientName))
     .replace(/\{clientName\}/g, clientName)
     .replace(/\{brokerName\}/g, brokerName)
     .replace(/\{brokerPhone\}/g, brokerPhone)
@@ -91,7 +93,7 @@ function fillTemplate(template: string, address: string, time: string, clientNam
 const NEW_VIEWING_WINDOW_DAYS = 21;
 
 const defaultInitialSmsTemplate =
-  "Dobrý den, {clientName}, potvrzujeme prohlídku nemovitosti na adrese {address} dne {date} v {time}. S pozdravem {brokerName}";
+  "Dobrý den, {clientNameVocative}, potvrzujeme prohlídku nemovitosti na adrese {address} dne {date} v {time}. S pozdravem {brokerName}";
 
 export async function GET(request: NextRequest) {
   if (!checkCronAuth(request)) {
