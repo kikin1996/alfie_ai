@@ -3,13 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Settings, LayoutDashboard, LogOut, ShieldCheck, Coins, CreditCard, Phone, Building2 } from "lucide-react";
+import { Settings, LayoutDashboard, LogOut, ShieldCheck, Coins, CreditCard, Phone, Building2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 
 const navItems = [
   { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+  { label: "SMS", icon: MessageSquare, path: "/sms" },
   { label: "Správa", icon: Building2, path: "/projects" },
   { label: "Předplatné", icon: CreditCard, path: "/subscription" },
   { label: "Nastavení", icon: Settings, path: "/settings" },
