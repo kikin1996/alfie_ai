@@ -101,7 +101,7 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: viewings } = await supabaseAdmin
     .from("viewings")
-    .select("id, user_id, client_phone, client_name, address, event_start, status, sms2h_sent, sms1h_sent, sms_sent_at")
+    .select("id, user_id, client_phone, client_name, address, event_start, status, sms2h_sent, sms1h_sent, sms_sent_at, sms_log")
     .in("status", ["sms_sent", "pending"])
     .gte("event_start", since);
 
@@ -109,6 +109,7 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
     id: string; user_id: string; client_phone: string; client_name: string;
     address: string; event_start: string; status: string;
     sms2h_sent?: boolean; sms1h_sent?: boolean; sms_sent_at?: string | null;
+    sms_log?: { type: string; text: string; sentAt: string }[] | null;
   };
 
   const candidates = ((viewings ?? []) as Row[]).filter(
@@ -151,6 +152,8 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
   const newStatus =
     intent === "confirmed" ? "confirmed" : intent === "declined" ? "cancelled" : null;
 
+  const smsLog = viewing.sms_log ?? [];
+
   await supabaseAdmin
     .from("viewings")
     .update({
@@ -159,6 +162,7 @@ async function handleIncoming(params: URLSearchParams): Promise<NextResponse> {
         confirmed_at: newStatus === "confirmed" ? new Date().toISOString() : null,
       } : {}),
       client_reply: message,
+      sms_log: [...smsLog, { type: "reply_in", text: message, sentAt: new Date().toISOString() }],
       updated_at: new Date().toISOString(),
     })
     .eq("id", viewing.id);

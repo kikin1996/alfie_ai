@@ -12,6 +12,7 @@ const typeLabels: Record<string, string> = {
   sms2h: "SMS 2h před",
   sms1h: "SMS 1h před",
   post_viewing: "Dotaz po prohlídce",
+  reply_in: "Odpověď klienta",
 };
 
 export async function GET(request: NextRequest) {
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
 
   const history: {
     viewingId: string; projectName: string | null; address: string; clientName: string;
-    type: string; label: string; text: string; sentAt: string;
+    type: string; label: string; text: string; sentAt: string; direction: "in" | "out";
   }[] = [];
   const pending: {
     viewingId: string; projectName: string | null; address: string; clientName: string;
@@ -79,6 +80,7 @@ export async function GET(request: NextRequest) {
         label: typeLabels[entry.type] ?? entry.type,
         text: entry.text,
         sentAt: entry.sentAt,
+        direction: entry.type === "reply_in" ? "in" : "out",
       });
     }
 

@@ -15,6 +15,7 @@ interface HistoryEntry {
   label: string;
   text: string;
   sentAt: string;
+  direction: "in" | "out";
 }
 
 interface PendingEntry {
@@ -135,11 +136,13 @@ export default function SmsHistoryPage() {
         <CardContent className="space-y-3">
           {history.length === 0 && <p className="text-sm text-muted-foreground">Žádné SMS podle filtru nenalezeny.</p>}
           {history.map((h, i) => (
-            <div key={i} className="space-y-1 border-b border-border/50 pb-3 last:border-0 last:pb-0">
+            <div key={i} className={`space-y-1 border-b border-border/50 pb-3 last:border-0 last:pb-0 ${h.direction === "in" ? "pl-3 border-l-2 border-l-primary/50" : ""}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{h.clientName}</span>
-                  <Badge variant="confirmed">{h.label}</Badge>
+                  <Badge variant={h.direction === "in" ? "outline" : "confirmed"}>
+                    {h.direction === "in" ? "← " : "→ "}{h.label}
+                  </Badge>
                 </div>
                 <span className="text-xs text-muted-foreground">{fmt(h.sentAt)}</span>
               </div>
