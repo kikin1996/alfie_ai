@@ -76,7 +76,7 @@ const defaultTemplate =
   "Dobrý den, prosím o potvrzení prohlídky dne {date} v {time} na adrese {address}.";
 
 const defaultInitialSmsTemplate =
-  "Dobrý den, {clientNameVocative}, potvrzujeme prohlídku nemovitosti na adrese {address} dne {date} v {time}. S pozdravem {brokerName}";
+  "Dobrý den, {clientGreeting}, potvrzujeme prohlídku nemovitosti na adrese {address} dne {date} v {time}. S pozdravem {brokerName}";
 
 function SettingsPageInner() {
   const { user, loading: authLoading } = useAuth();
@@ -398,7 +398,7 @@ function SettingsPageInner() {
           <CardHeader>
             <CardTitle>Šablona SMS</CardTitle>
             <CardDescription>
-              Placeholdery: {"{address}"}, {"{date}"}, {"{time}"}, {"{clientName}"}, {"{clientNameVocative}"} (5. pád, např. "Karolíno"), {"{agencyName}"}, {"{brokerName}"}, {"{brokerPhone}"}
+              Placeholdery: {"{address}"}, {"{date}"}, {"{time}"}, {"{clientName}"}, {"{clientGreeting}"} (např. "paní Krutová" / "pane Novák"), {"{clientNameVocative}"} (5. pád křestního jména, např. "Karolíno"), {"{agencyName}"}, {"{brokerName}"}, {"{brokerPhone}"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -424,7 +424,7 @@ function SettingsPageInner() {
           <CardHeader>
             <CardTitle>Úvodní SMS po založení prohlídky</CardTitle>
             <CardDescription>
-              Jakmile systém najde novou prohlídku (kontrola co 5 minut, až 3 týdny dopředu), pošle klientovi ihned SMS s adresou, datem a časem. Placeholdery: {"{address}"}, {"{date}"}, {"{time}"}, {"{clientName}"}, {"{clientNameVocative}"} (5. pád, např. "Karolíno"), {"{agencyName}"}, {"{brokerName}"}, {"{brokerPhone}"}
+              Jakmile systém najde novou prohlídku (kontrola co 5 minut, až 3 týdny dopředu), pošle klientovi ihned SMS s adresou, datem a časem. Placeholdery: {"{address}"}, {"{date}"}, {"{time}"}, {"{clientName}"}, {"{clientGreeting}"} (např. "paní Krutová" / "pane Novák"), {"{clientNameVocative}"} (5. pád křestního jména, např. "Karolíno"), {"{agencyName}"}, {"{brokerName}"}, {"{brokerPhone}"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">

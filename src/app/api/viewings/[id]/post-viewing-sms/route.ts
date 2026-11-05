@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { getSupabaseAdmin } from "@/lib/supabase-admin";
 import { sendSms } from "@/lib/smsbrana";
 import { shortCode, withCode } from "@/lib/shortCode";
-import { toVocative } from "@/lib/czechVocative";
+import { formalGreeting } from "@/lib/czechVocative";
 
 const defaultTemplate =
   "Dobrý den, {clientName}, rozhodli jste se ohledně nemovitosti na adrese {address}? Napište prosím ANO (máte zájem) nebo NE (nemáte zájem). Děkujeme, {brokerName}";
@@ -60,7 +60,7 @@ export async function POST(
   const code = shortCode(viewing.id);
   const body = withCode(
     defaultTemplate
-      .replace(/\{clientName\}/g, toVocative(viewing.client_name || "Klient"))
+      .replace(/\{clientName\}/g, formalGreeting(viewing.client_name || "Klient"))
       .replace(/\{address\}/g, viewing.address)
       .replace(/\{brokerName\}/g, settings?.broker_name ?? ""),
     code

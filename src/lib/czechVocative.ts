@@ -43,3 +43,22 @@ export function toVocative(fullName: string): string {
   const key = stripDiacritics(firstName).toLowerCase();
   return VOCATIVE[key] ?? fullName;
 }
+
+/**
+ * Formální oslovení "pane/paní Příjmení" – příjmení se NIKDY neskloňuje
+ * (ženská příjmení na -á/-ová se v 5. pádu stejně nemění, mužská necháváme
+ * v 1. pádu, ať nevznikne špatný tvar). Pohlaví se pozná z koncovky
+ * příjmení (-á/-ová = žena), což je u českých příjmení spolehlivé.
+ * Bez příjmení (jen jedno slovo) zkusí aspoň skloňit křestní jméno,
+ * jinak vrátí jméno beze změny.
+ */
+export function formalGreeting(fullName: string): string {
+  const parts = (fullName || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return toVocative(parts[0]);
+
+  const surname = parts[parts.length - 1];
+  // Porovnáváme bez diakritiky, ať pozná i "Krutova" napsané bez háčků/čárek.
+  const isFemale = /a$/i.test(stripDiacritics(surname));
+  return `${isFemale ? "paní" : "pane"} ${surname}`;
+}
